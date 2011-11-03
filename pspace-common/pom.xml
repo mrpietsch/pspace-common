@@ -13,9 +13,7 @@
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>P-Space Common Parent POM</name>
-    <url>http://maven.apache.org</url>
-
+    <name>common-parent</name>
 
     <modules>
         <module>common-util</module>
