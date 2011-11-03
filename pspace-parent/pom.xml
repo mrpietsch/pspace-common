@@ -9,7 +9,6 @@
     <packaging>pom</packaging>
 
     <name>P-Space Parent POM</name>
-    <url>http://maven.apache.org</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -18,6 +17,8 @@
         <tiles.version>2.2.2</tiles.version>
         <compass.version>2.2.0</compass.version>
         <lucene.version>2.4.1</lucene.version>
+        <jackrabbit.version>2.2.9</jackrabbit.version>
+        <slf4j.version>1.6.1</slf4j.version>
     </properties>
 
     <repositories>
@@ -60,14 +61,15 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>1.6.1</version>
+                <version>${slf4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-log4j12</artifactId>
                 <scope>runtime</scope>
-                <version>1.6.1</version>
+                <version>${slf4j.version}</version>
             </dependency>
+
 
             <dependency>
                 <groupId>org.springframework</groupId>
@@ -76,29 +78,12 @@
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
-                <artifactId>spring-webmvc</artifactId>
+                <artifactId>spring-core</artifactId>
                 <version>${spring.version}</version>
             </dependency>
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-orm</artifactId>
-                <version>${spring.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-aspects</artifactId>
-                <version>${spring.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-tx</artifactId>
-                <version>${spring.version}</version>
-            </dependency>
-
             <dependency>
                 <groupId>org.springframework</groupId>
                 <artifactId>spring-test</artifactId>
-                <scope>test</scope>
                 <version>${spring.version}</version>
             </dependency>
             <dependency>
@@ -108,8 +93,24 @@
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
+                <artifactId>spring-tx</artifactId>
+                <version>${spring.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-orm</artifactId>
+                <version>${spring.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
                 <artifactId>spring-context</artifactId>
                 <version>${spring.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-webmvc</artifactId>
+                <version>${spring.version}</version>
+                <scope>compile</scope>
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
@@ -141,6 +142,12 @@
                 <artifactId>spring-security-acl</artifactId>
                 <version>${spring.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-aspects</artifactId>
+                <version>${spring.version}</version>
+            </dependency>
+
 
             <!--dependency>
                 <groupId>org.hibernate</groupId>
@@ -151,6 +158,82 @@
                 <groupId>org.hibernate</groupId>
                 <artifactId>hibernate-annotations</artifactId>
                 <version>${hibernate.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.hibernate</groupId>
+                <artifactId>hibernate-core</artifactId>
+                <version>${hibernate.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.hibernate</groupId>
+                <artifactId>hibernate-commons-annotations</artifactId>
+                <version>3.2.0.Final</version>
+            </dependency>
+            <dependency>
+                <groupId>org.hibernate.javax.persistence</groupId>
+                <artifactId>hibernate-jpa-2.0-api</artifactId>
+                <version>1.0.0.Final</version>
+            </dependency>
+            <dependency>
+                <groupId>org.hibernate</groupId>
+                <artifactId>hibernate</artifactId>
+                <version>3.2.7.ga</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.transaction</groupId>
+                        <artifactId>jta</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+            <dependency>
+                <groupId>org.hibernate</groupId>
+                <artifactId>hibernate-validator-annotation-processor</artifactId>
+                <version>4.1.0.Final</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.validation</groupId>
+                <artifactId>validation-api</artifactId>
+                <version>1.0.0.GA</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>javax.transaction</groupId>
+                <artifactId>jta</artifactId>
+                <version>1.1</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils</artifactId>
+                <version>1.8.3</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-collections</groupId>
+                <artifactId>commons-collections</artifactId>
+                <version>3.2.1</version>
+                <scope>runtime</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+                <version>1.1.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>commons-dbcp</groupId>
+                <artifactId>commons-dbcp</artifactId>
+                <version>1.4</version>
+            </dependency>
+
+            <dependency>
+                <groupId>javax.servlet</groupId>
+                <artifactId>jstl</artifactId>
+                <version>1.2</version>
+                <scope>compile</scope>
             </dependency>
 
             <dependency>
@@ -202,7 +285,6 @@
             </dependency>
 
 
-
             <dependency>
                 <groupId>org.compass-project</groupId>
                 <artifactId>compass</artifactId>
@@ -240,12 +322,174 @@
                 <version>${lucene.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>4.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpcore</artifactId>
+                <version>4.0.1</version>
+            </dependency>
+            <dependency>
+                <groupId>net.fortuna.ical4j</groupId>
+                <artifactId>ical4j</artifactId>
+                <version>1.0-rc1</version>
+            </dependency>
+            <dependency>
+                <groupId>net.sf.textile4j</groupId>
+                <artifactId>textile4j</artifactId>
+                <version>1.20</version>
+            </dependency>
+            <dependency>
+                <groupId>net.fckeditor</groupId>
+                <artifactId>java-core</artifactId>
+                <version>2.6</version>
+                <scope>runtime</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>opensymphony</groupId>
+                <artifactId>sitemesh</artifactId>
+                <version>2.4.2</version>
+            </dependency>
+
+            <dependency>
+                <groupId>displaytag</groupId>
+                <artifactId>displaytag</artifactId>
+                <version>1.2</version>
+            </dependency>
+            <dependency>
+                <groupId>xml-apis</groupId>
+                <artifactId>xml-apis</artifactId>
+                <version>2.0.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.htmlparser</groupId>
+                <artifactId>htmlparser</artifactId>
+                <version>1.6</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springmodules</groupId>
+                <artifactId>spring-modules-jcr</artifactId>
+                <version>0.8</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>spring</artifactId>
+                        <groupId>org.springframework</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>jsr170</artifactId>
+                        <groupId>jsr170</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>servlet-api</artifactId>
+                        <groupId>javax.servlet</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>jackrabbit-jca</artifactId>
+                        <groupId>org.apache.jackrabbit</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>jackrabbit-jcr-rmi</artifactId>
+                        <groupId>org.apache.jackrabbit</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>jeceira</artifactId>
+                        <groupId>jeceira</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>doka</artifactId>
+                        <groupId>aparzev</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>commons</artifactId>
+                        <groupId>aparzev</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>jug-asl</artifactId>
+                        <groupId>jug</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>geronimo-spec-jta</artifactId>
+                        <groupId>geronimo-spec</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>geronimo-spec-j2ee-connector</artifactId>
+                        <groupId>geronimo-spec</groupId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
+            <dependency>
+                <groupId>javax.jcr</groupId>
+                <artifactId>jcr</artifactId>
+                <version>2.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.jackrabbit</groupId>
+                <artifactId>jackrabbit-jcr-server</artifactId>
+                <version>${jackrabbit.version}</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.jackrabbit</groupId>
+                <artifactId>jackrabbit-core</artifactId>
+                <version>${jackrabbit.version}</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.jackrabbit</groupId>
+                <artifactId>jackrabbit-jcr-rmi</artifactId>
+                <version>${jackrabbit.version}</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.jackrabbit</groupId>
+                <artifactId>jackrabbit-jcr-servlet</artifactId>
+                <version>${jackrabbit.version}</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.jackrabbit</groupId>
+                <artifactId>jackrabbit-webdav</artifactId>
+                <version>${jackrabbit.version}</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.jackrabbit</groupId>
+                <artifactId>jackrabbit-webapp</artifactId>
+                <version>${jackrabbit.version}</version>
+                <scope>compile</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>xerces</groupId>
+                <artifactId>xercesImpl</artifactId>
+                <version>2.9.1</version>
+            </dependency>
+
+
+            <dependency>
+                <groupId>commons-lang</groupId>
+                <artifactId>commons-lang</artifactId>
+                <version>2.6</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>2.0.1</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
-    
+
     <build>
-    
-  <resources>
+
+        <resources>
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>false</filtering>
