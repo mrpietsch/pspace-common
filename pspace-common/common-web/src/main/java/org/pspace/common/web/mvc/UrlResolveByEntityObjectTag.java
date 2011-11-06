@@ -11,7 +11,9 @@ import javax.servlet.jsp.JspException;
 
 /**
  * @author Martin Pietsch
+ * @deprecated in favor of {@link LinkByDomainObjectTag}
  */
+@Deprecated
 public class UrlResolveByEntityObjectTag extends UrlTag {
 
     private static final long serialVersionUID = -1493357742073187977L;

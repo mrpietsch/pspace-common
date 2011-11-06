@@ -6,7 +6,9 @@ import javax.servlet.jsp.JspException;
 
 /**
  * @author peach
+ * @deprecated in favor of {@link LinkByControllerMethodTag}
  */
+@Deprecated
 public class UrlResolveByControllerMethodTag extends UrlTag {
     private static final long serialVersionUID = -1493357742073187977L;
 
@@ -21,6 +23,8 @@ public class UrlResolveByControllerMethodTag extends UrlTag {
             assert controller != null && methodName != null;
             Class<?> controllerClass = Class.forName(controller);
             String url = UrlResolverHelper.resolveUrlByControllerMethod(controllerClass, methodName, object);
+
+
             this.setValue(url);
             return super.doEndTag();
         } catch (Exception ex) {
