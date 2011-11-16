@@ -1,5 +1,6 @@
 package org.pspace.common.web.dao.jackrabbit;
 
+import org.apache.jackrabbit.util.Text;
 import org.pspace.common.api.*;
 import org.pspace.common.web.dao.*;
 import org.slf4j.Logger;
@@ -11,6 +12,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springmodules.jcr.JcrTemplate;
 
 import javax.jcr.*;
+import javax.jcr.query.Query;
+import javax.jcr.query.Row;
+import javax.jcr.query.RowIterator;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -33,6 +37,48 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
     private final static String ATTACHMENT_FOLDER = "attachments";
     private final static String GALLERY_FOLDER = "gallery";
 
+    @Override
+    public List<Row> search(String q) throws RepositoryException {
+        String stmt;
+        // String queryTerms = "";
+        if (q.startsWith("related:")) {
+            String path = q.substring("related:".length());
+            path = path.replaceAll("'", "''");
+            stmt = "//element(*, nt:file)[rep:similar(jcr:content, '" + path + "/jcr:content')]/rep:excerpt(.) order by @jcr:score descending";
+            // queryTerms = "similar to <b>" + Text.encodeIllegalXMLCharacters(path) + "</b>";
+        } else {
+            // queryTerms = "for <b>" + Text.encodeIllegalXMLCharacters(q) + "</b>";
+            q = q.replaceAll("'", "''");
+            stmt = "//element(*, nt:file)[jcr:contains(jcr:content, '" + q + "')]/rep:excerpt(.) order by @jcr:score descending";
+        }
+        Session session = null;
+        try {
+            session = jcrTemplate.getSessionFactory().getSession();
+            Query query = session.getWorkspace().getQueryManager().createQuery(stmt, Query.XPATH);
+            //long time = System.currentTimeMillis();
+            RowIterator rows = query.execute().getRows();
+            //time = System.currentTimeMillis() - time;
+
+            List<Row> rowList = new ArrayList<Row>((int) rows.getSize());
+            while (rows.hasNext()) {
+                rowList.add(rows.nextRow());
+            }
+            return rowList;
+        } finally {
+            if (session != null) session.logout();
+        }
+
+    }
+
+    @Override
+    public String suggestQuery(String q) throws RepositoryException {
+        Session session = jcrTemplate.getSessionFactory().getSession();
+        Value v = session.getWorkspace().getQueryManager().createQuery(
+                "/jcr:root[rep:spellcheck('" + q + "')]/(rep:spellcheck())",
+                Query.XPATH).execute().getRows().nextRow().getValue("rep:spellcheck()");
+        session.logout();
+        return v != null ? v.getString() : null;
+    }
 
     @Transactional
     private Node getFolderForObject(ObjectWithID objectWithID, boolean createIfNotExists) throws RepositoryException {
@@ -131,7 +177,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                 while (nodeIt.hasNext()) {
                     Node fileNode = nodeIt.nextNode();
 
-                    if ( fileNode.getName().startsWith(THUMBNAIL_PREFIX) ) continue;
+                    if (fileNode.getName().startsWith(THUMBNAIL_PREFIX)) continue;
 
                     if (fileNode.hasNode("jcr:content")) {
                         Node resourceNode = fileNode.getNode("jcr:content");
@@ -140,40 +186,40 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                             // TODO check mime type if MacOS starts providing the correct ones instead of application/xml
                             // if (mimeType.startsWith("image/")) {
 
-                                // look if there is a thumbnail and create one if not
-                                String thumbName = THUMBNAIL_PREFIX + fileNode.getName();
-                                final Node thumbFile;
-                                if (attachmentsNode.hasNode(thumbName)) {
-                                    thumbFile = attachmentsNode.getNode(thumbName);
-                                } else {
+                            // look if there is a thumbnail and create one if not
+                            String thumbName = THUMBNAIL_PREFIX + fileNode.getName();
+                            final Node thumbFile;
+                            if (attachmentsNode.hasNode(thumbName)) {
+                                thumbFile = attachmentsNode.getNode(thumbName);
+                            } else {
 
-                                    thumbFile = attachmentsNode.addNode(thumbName, "nt:file");
-                                    thumbFile.addMixin("mix:lockable");
+                                thumbFile = attachmentsNode.addNode(thumbName, "nt:file");
+                                thumbFile.addMixin("mix:lockable");
 
-                                    Property contentProperty = resourceNode.getProperty("jcr:data");
-                                    Binary binary = contentProperty.getBinary();
+                                Property contentProperty = resourceNode.getProperty("jcr:data");
+                                Binary binary = contentProperty.getBinary();
 
-                                    // resize the image
-                                    Binary thumbImage = resizeImage(binary);
+                                // resize the image
+                                Binary thumbImage = resizeImage(binary);
 
-                                    Node resource = thumbFile.addNode("jcr:content", "nt:resource");
-                                    resource.setProperty("jcr:data", thumbImage);
-                                    resource.setProperty("jcr:mimeType", mimeType, PropertyType.STRING);
-                                    resource.setProperty("jcr:lastModified", Calendar.getInstance());
+                                Node resource = thumbFile.addNode("jcr:content", "nt:resource");
+                                resource.setProperty("jcr:data", thumbImage);
+                                resource.setProperty("jcr:mimeType", mimeType, PropertyType.STRING);
+                                resource.setProperty("jcr:lastModified", Calendar.getInstance());
 
-                                    log.info("Saving thumbnail {}" + thumbFile.getPath());
+                                log.info("Saving thumbnail {}" + thumbFile.getPath());
 
-                                    changes = true;
+                                changes = true;
 
-                                }
+                            }
 
-                                ImageFileInfo fileInfo = new ImageFileInfo();
-                                fileInfo.setName(fileNode.getName());
-                                fileInfo.setPath(fileNode.getPath());
-                                fileInfo.setMimeType(mimeType);
-                                fileInfo.setThumbnailPath(thumbFile.getPath());
+                            ImageFileInfo fileInfo = new ImageFileInfo();
+                            fileInfo.setName(fileNode.getName());
+                            fileInfo.setPath(fileNode.getPath());
+                            fileInfo.setMimeType(mimeType);
+                            fileInfo.setThumbnailPath(thumbFile.getPath());
 
-                                fileNames.add(fileInfo);
+                            fileNames.add(fileInfo);
                             //}
 
                         }

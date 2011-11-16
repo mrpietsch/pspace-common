@@ -114,6 +114,16 @@
         </attribute>
     </tag>
     <tag>
+        <name>link</name>
+        <tag-class>org.pspace.common.web.mvc.LinkTag</tag-class>
+        <body-content>JSP</body-content>
+    </tag>
+    <tag>
+        <name>url</name>
+        <tag-class>org.pspace.common.web.mvc.UrlTag</tag-class>
+        <body-content>empty</body-content>
+    </tag>
+    <tag>
         <name>collection-to-string</name>
         <tag-class>org.pspace.common.web.mvc.CollectionToStringTag</tag-class>
         <body-content>empty</body-content>

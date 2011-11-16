@@ -22,16 +22,8 @@ public class LinkByDomainObjectTag extends AuthByDomainObjectTag {
 
         try {
             int superResult = super.doStartTag();
-
-            if (isAuthorized()) {
-                String resolvedUrl = UrlSupport.resolveUrl(this.getUrl(), null, pageContext);
-                HttpServletResponse response = ((HttpServletResponse) pageContext.getResponse());
-                JspWriter out = pageContext.getOut();
-                out.println(String.format("<a href=\"%s\">", response.encodeURL(resolvedUrl)));
-            }
-
+            LinkTag.printLinkStart(this, pageContext);
             return superResult;
-
         } catch (Exception ex) {
             throw new Error(ex.getMessage());
         }
@@ -40,7 +32,7 @@ public class LinkByDomainObjectTag extends AuthByDomainObjectTag {
     @Override
     public int doEndTag() throws JspException {
         try {
-            if (this.isAuthorized()) pageContext.getOut().print("</a>");
+            LinkTag.printLinkEnd(this, pageContext);
         } catch (Exception ex) {
             throw new Error(ex.getMessage());
         }
