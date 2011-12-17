@@ -11,6 +11,7 @@ import org.apache.directory.server.xdbm.Index;
 import org.apache.directory.shared.ldap.name.LdapDN;
 import org.pspace.common.api.Person;
 import org.pspace.common.web.dao.LDAPDao;
+import org.pspace.common.web.mvc.PhoneEditor;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.StringUtils;
@@ -34,8 +35,9 @@ public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBea
 
     private final static String PW_ENCODING_ALGORITHM = "SHA";
 
+    private static final PhoneEditor PHONE_EDITOR = new PhoneEditor();
+
     private String rootDomain;
-    private String rootDc;
     private String rootDn;
 
     private DefaultDirectoryService directoryService;
@@ -65,7 +67,7 @@ public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBea
         // dc=example,dc=com
         rootDn = StringUtils.collectionToDelimitedString(Arrays.asList(rootDnParts),",","dc=","");
         // example
-        rootDc = rootDnParts[0];
+        String rootDc = rootDnParts[0];
 
         directoryService = new DefaultDirectoryService();
         directoryService.setShutdownHookEnabled(true);
@@ -128,7 +130,6 @@ public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBea
 
     @Override
     public void updatePerson(Person person) {
-
         try {
             String trim = person.getFullName().trim();
             LdapDN memberDn = new LdapDN("cn=" + trim + "," + rootDn);
@@ -141,15 +142,21 @@ public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBea
             memberEntry.add("givenName", person.getPrename());
             memberEntry.add("sn", person.getLastname());
             memberEntry.add("o", person.getOrganizationName());
-            memberEntry.add("ou", person.getOrganizationalUnitName());
 //            memberEntry.add("countryName", "Germany");
 
+            if (person.getOrganizationalUnitName() != null && !person.getOrganizationalUnitName().isEmpty()) memberEntry.add("ou", person.getOrganizationalUnitName());
             if (person.getUsername() != null && !person.getUsername().isEmpty()) memberEntry.add("uid", person.getUsername());
             if (person.getPassword() != null && !person.getPassword().isEmpty()) memberEntry.add("userpassword", encodePass(person.getPassword()));
             if (person.getPrefix() != null && !person.getPrefix().isEmpty()) memberEntry.add("title", person.getPrefix());
             if (person.getEmail() != null && !person.getEmail().isEmpty()) memberEntry.add("mail", person.getEmail());
-            if (person.getPhone() != null && !person.getPhone().isEmpty()) memberEntry.add("telephoneNumber", person.getPhone());
-            if (person.getMobile() != null && !person.getMobile().isEmpty()) memberEntry.add("mobile", person.getMobile());
+            if (person.getPhone() != null && !person.getPhone().isEmpty()) {
+                PHONE_EDITOR.setAsText(person.getPhone());
+                memberEntry.add("telephoneNumber", PHONE_EDITOR.getValue().toString());
+            }
+            if (person.getMobile() != null && !person.getMobile().isEmpty()) {
+                PHONE_EDITOR.setAsText(person.getMobile());
+                memberEntry.add("mobile", PHONE_EDITOR.getValue().toString());
+            }
             if (person.getStreet() != null && !person.getStreet().isEmpty()) memberEntry.add("street", person.getStreet());
             if (person.getCity() != null && !person.getCity().isEmpty()) memberEntry.add("l", person.getCity());
             if (person.getPostalCode() != null && !person.getPostalCode().isEmpty()) memberEntry.add("postalCode", person.getPostalCode());
