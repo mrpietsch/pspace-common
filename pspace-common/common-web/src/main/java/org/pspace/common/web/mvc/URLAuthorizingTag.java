@@ -1,6 +1,6 @@
 package org.pspace.common.web.mvc;
 
-import org.springframework.security.taglibs.authz.AuthorizeTag;
+import org.springframework.security.taglibs.authz.JspAuthorizeTag;
 
 import javax.servlet.jsp.JspException;
 import javax.servlet.jsp.tagext.Tag;
@@ -8,7 +8,7 @@ import javax.servlet.jsp.tagext.Tag;
 /**
  * @author mrpietsch
  */
-public abstract class URLAuthorizingTag extends AuthorizeTag {
+public abstract class URLAuthorizingTag extends JspAuthorizeTag {
 
     private String myurl = null;
 
