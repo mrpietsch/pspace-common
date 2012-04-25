@@ -12,7 +12,8 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring.version>3.1.0.RELEASE</spring.version>
+        <spring.version>3.1.1.RELEASE</spring.version>
+        <springsecurity.version>3.1.0.RELEASE</springsecurity.version>
         <hibernate.version>3.6.8.Final</hibernate.version>
         <tiles.version>2.2.2</tiles.version>
         <compass.version>2.2.0</compass.version>
@@ -120,27 +121,27 @@
             <dependency>
                 <groupId>org.springframework.security</groupId>
                 <artifactId>spring-security-core</artifactId>
-                <version>${spring.version}</version>
+                <version>${springsecurity.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.security</groupId>
                 <artifactId>spring-security-config</artifactId>
-                <version>${spring.version}</version>
+                <version>${springsecurity.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.security</groupId>
                 <artifactId>spring-security-web</artifactId>
-                <version>${spring.version}</version>
+                <version>${springsecurity.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.security</groupId>
                 <artifactId>spring-security-taglibs</artifactId>
-                <version>${spring.version}</version>
+                <version>${springsecurity.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.security</groupId>
                 <artifactId>spring-security-acl</artifactId>
-                <version>${spring.version}</version>
+                <version>${springsecurity.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
@@ -332,9 +333,9 @@
                 <version>4.0.1</version>
             </dependency>
             <dependency>
-                <groupId>net.fortuna.ical4j</groupId>
+                <groupId>org.mnode.ical4j</groupId>
                 <artifactId>ical4j</artifactId>
-                <version>1.0-rc1</version>
+                <version>1.0.2</version>
             </dependency>
             <dependency>
                 <groupId>net.sf.textile4j</groupId>
@@ -543,6 +544,63 @@
                         <target>1.6</target>
                     </configuration>
                 </plugin>
+
+                <!-- Make sure the plugin does not pull the wrong version of hibernate -->
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>hibernate3-maven-plugin</artifactId>
+                    <version>2.2</version>
+                    <dependencies>
+                        <!--<dependency>-->
+                            <!--<groupId>org.hibernate</groupId>-->
+                            <!--<artifactId>hibernate-entitymanager</artifactId>-->
+                            <!--<version>${hibernate.version}</version>-->
+                            <!--<exclusions>-->
+                                <!--<exclusion>-->
+                                    <!--<groupId>cglib</groupId>-->
+                                    <!--<artifactId>cglib</artifactId>-->
+                                <!--</exclusion>-->
+                                <!--<exclusion>-->
+                                    <!--<groupId>commons-logging</groupId>-->
+                                    <!--<artifactId>commons-logging</artifactId>-->
+                                <!--</exclusion>-->
+                            <!--</exclusions>-->
+                        <!--</dependency>-->
+                        <dependency>
+                            <groupId>org.hibernate</groupId>
+                            <artifactId>hibernate-core</artifactId>
+                            <version>${hibernate.version}</version>
+                            <exclusions>
+                                <exclusion>
+                                    <groupId>cglib</groupId>
+                                    <artifactId>cglib</artifactId>
+                                </exclusion>
+                                <exclusion>
+                                    <groupId>commons-logging</groupId>
+                                    <artifactId>commons-logging</artifactId>
+                                </exclusion>
+                            </exclusions>
+                        </dependency>
+                        <dependency>
+                            <groupId>javax.validation</groupId>
+                            <artifactId>validation-api</artifactId>
+                            <version>1.0.0.GA</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.hibernate</groupId>
+                            <artifactId>hibernate-validator</artifactId>
+                            <version>4.0.2.GA</version>
+                        </dependency>
+
+                        <dependency>
+                            <groupId>org.hibernate</groupId>
+                            <artifactId>hibernate-validator-annotation-processor</artifactId>
+                            <version>4.1.0.Final</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+
+
             </plugins>
         </pluginManagement>
 
