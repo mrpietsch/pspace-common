@@ -339,7 +339,7 @@
             <dependency>
                 <groupId>net.sf.textile4j</groupId>
                 <artifactId>textile4j</artifactId>
-                <version>1.20</version>
+                <version>1.2</version>
             </dependency>
             <dependency>
                 <groupId>net.fckeditor</groupId>
