@@ -1,6 +1,7 @@
 package org.pspace.common.web.dao;
 
 import org.pspace.common.api.*;
+import org.pspace.common.web.dao.jackrabbit.SearchResult;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.jcr.RepositoryException;
@@ -13,13 +14,11 @@ import java.util.List;
  */
 public interface RepositoryDao {
 
-    List<Row> search(String q) throws RepositoryException;
+    List<SearchResult> search(String q) throws RepositoryException;
 
     String suggestQuery(String q) throws RepositoryException;
 
     void saveAttachment(ObjectWithID objectWithID, MultipartFile file) throws RepositoryException, IOException;
-
-    void saveImage(ObjectWithID objectWithID, MultipartFile multipartFile) throws RepositoryException, IOException;
 
     FileInfo getImage(ObjectWithAttachments objectWithAttachments);
 

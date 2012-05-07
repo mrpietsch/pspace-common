@@ -26,7 +26,7 @@ import java.util.List;
 @Service("repositoryDao")
 public class RepositoryDaoJackrabbit implements RepositoryDao {
 
-    private static final String THUMBNAIL_PREFIX = "thumb_";
+    private static final String THUMBNAIL_PREFIX = "th_";
     private final Logger log = LoggerFactory.getLogger(RepositoryDaoJackrabbit.class);
 
     @Autowired
@@ -34,11 +34,11 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
     private final static String IGNORES_FILES_REGEX = "(\\.DS_Store|\\._\\.DS_Store|\\._.*)";
 
-    private final static String ATTACHMENT_FOLDER = "attachments";
-    private final static String GALLERY_FOLDER = "gallery";
+//    private final static String ATTACHMENT_FOLDER = "attachments";
+//    private final static String GALLERY_FOLDER = "gallery";
 
     @Override
-    public List<Row> search(String q) throws RepositoryException {
+    public List<SearchResult> search(String q) throws RepositoryException {
         String stmt;
         // String queryTerms = "";
         if (q.startsWith("related:")) {
@@ -59,11 +59,20 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
             RowIterator rows = query.execute().getRows();
             //time = System.currentTimeMillis() - time;
 
-            List<Row> rowList = new ArrayList<Row>((int) rows.getSize());
+            List<SearchResult> results = new ArrayList<SearchResult>((int) rows.getSize());
             while (rows.hasNext()) {
-                rowList.add(rows.nextRow());
+                Row row = rows.nextRow();
+                SearchResult r = new SearchResult();
+                r.setScore(row.getScore());
+                r.setPath(row.getPath());
+                r.setExcerpt(row.getValue("rep:excerpt(jcr:content)").getString());
+                r.setData(row.getNode());
+                r.setTitle(row.getNode().getName());
+                results.add(r);
             }
-            return rowList;
+
+
+            return results;
         } finally {
             if (session != null) session.logout();
         }
@@ -110,14 +119,13 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
         }
     }
 
-    private void save(ObjectWithID objectWithID, MultipartFile multipartFile, String subFolderName) throws RepositoryException, IOException {
+    private void save(ObjectWithID objectWithID, MultipartFile multipartFile) throws RepositoryException, IOException {
 
         Node objectFolder = getFolderForObject(objectWithID, true);
 
         assert objectFolder != null;
-        Node attachmentsFolder = getOrCreateFolder(objectFolder, subFolderName);
 
-        Node file = attachmentsFolder.addNode(multipartFile.getOriginalFilename(), "nt:file");
+        Node file = objectFolder.addNode(multipartFile.getOriginalFilename(), "nt:file");
         file.addMixin("mix:lockable");
 
         Node resource = file.addNode("jcr:content", "nt:resource");
@@ -133,13 +141,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
     @Transactional
     @Override
     public void saveAttachment(ObjectWithID objectWithID, MultipartFile multipartFile) throws RepositoryException, IOException {
-        save(objectWithID, multipartFile, ATTACHMENT_FOLDER);
-    }
-
-    @Transactional
-    @Override
-    public void saveImage(ObjectWithID objectWithID, MultipartFile multipartFile) throws RepositoryException, IOException {
-        save(objectWithID, multipartFile, GALLERY_FOLDER);
+        save(objectWithID, multipartFile);
     }
 
     private Node getOrCreateFolder(Node node, String folderName) throws RepositoryException {
@@ -157,43 +159,33 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
             boolean changes = false;
 
-            if (folder.hasNode(ATTACHMENT_FOLDER)) {
-                Node attachmentsNode = folder.getNode(ATTACHMENT_FOLDER);
-                NodeIterator nodeIt = attachmentsNode.getNodes();
-                List<FileInfo> fileNames = new ArrayList<FileInfo>();
-                while (nodeIt.hasNext()) {
-                    Node node = nodeIt.nextNode();
+            NodeIterator nodeIt = folder.getNodes();
+            List<ImageFileInfo> fileNames = new ArrayList<ImageFileInfo>();
+            while (nodeIt.hasNext()) {
+                Node fileNode = nodeIt.nextNode();
 
-                    if (node.getName().matches(IGNORES_FILES_REGEX)) continue;
+                if (fileNode.getName().startsWith(THUMBNAIL_PREFIX)) continue;
 
-                    fileNames.add(new FileInfo(node.getName(), node.getPath()));
-                }
-                objectWithAttachments.setAttachments(fileNames);
-            }
-            if (folder.hasNode(GALLERY_FOLDER)) {
-                Node attachmentsNode = folder.getNode(GALLERY_FOLDER);
-                NodeIterator nodeIt = attachmentsNode.getNodes();
-                List<ImageFileInfo> fileNames = new ArrayList<ImageFileInfo>();
-                while (nodeIt.hasNext()) {
-                    Node fileNode = nodeIt.nextNode();
+                if (fileNode.hasNode("jcr:content")) {
+                    Node resourceNode = fileNode.getNode("jcr:content");
+                    if (resourceNode.hasProperty("jcr:mimeType")) {
+                        String mimeType = resourceNode.getProperty("jcr:mimeType").getString();
 
-                    if (fileNode.getName().startsWith(THUMBNAIL_PREFIX)) continue;
+                        ImageFileInfo fileInfo = new ImageFileInfo();
+                        fileInfo.setName(fileNode.getName());
+                        fileInfo.setPath(fileNode.getPath());
+                        fileInfo.setMimeType(mimeType);
 
-                    if (fileNode.hasNode("jcr:content")) {
-                        Node resourceNode = fileNode.getNode("jcr:content");
-                        if (resourceNode.hasProperty("jcr:mimeType")) {
-                            String mimeType = resourceNode.getProperty("jcr:mimeType").getString();
-                            // TODO check mime type if MacOS starts providing the correct ones instead of application/xml
-                            // if (mimeType.startsWith("image/")) {
-
+                        if (mimeType.startsWith("image/")) {
                             // look if there is a thumbnail and create one if not
                             String thumbName = THUMBNAIL_PREFIX + fileNode.getName();
                             final Node thumbFile;
-                            if (attachmentsNode.hasNode(thumbName)) {
-                                thumbFile = attachmentsNode.getNode(thumbName);
+
+                            if (folder.hasNode(thumbName)) {
+                                thumbFile = folder.getNode(thumbName);
                             } else {
 
-                                thumbFile = attachmentsNode.addNode(thumbName, "nt:file");
+                                thumbFile = folder.addNode(thumbName, "nt:file");
                                 thumbFile.addMixin("mix:lockable");
 
                                 Property contentProperty = resourceNode.getProperty("jcr:data");
@@ -213,20 +205,15 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
                             }
 
-                            ImageFileInfo fileInfo = new ImageFileInfo();
-                            fileInfo.setName(fileNode.getName());
-                            fileInfo.setPath(fileNode.getPath());
-                            fileInfo.setMimeType(mimeType);
                             fileInfo.setThumbnailPath(thumbFile.getPath());
-
-                            fileNames.add(fileInfo);
-                            //}
-
                         }
+
+                        fileNames.add(fileInfo);
+
                     }
                 }
-                objectWithAttachments.setImages(fileNames);
             }
+            objectWithAttachments.setImages(fileNames);
 
             if (changes) {
                 jcrTemplate.save();

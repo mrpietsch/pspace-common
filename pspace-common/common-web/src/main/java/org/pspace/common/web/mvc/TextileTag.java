@@ -19,7 +19,7 @@ public class TextileTag extends TagSupport {
     @Override
     public int doStartTag() throws JspException {
         try {
-            String code = textile.process(value.toString());
+            String code = textile.process(value != null ? value.toString() : "");
 
             if (!(enclosingParagraph || code.isEmpty())) code = code.substring(4, code.length() - 4);
 
