@@ -1,8 +1,10 @@
 package org.pspace.common.web.dao.jackrabbit;
 
-import org.apache.jackrabbit.util.Text;
-import org.pspace.common.api.*;
-import org.pspace.common.web.dao.*;
+import org.pspace.common.api.FileInfo;
+import org.pspace.common.api.ImageFileInfo;
+import org.pspace.common.api.ObjectWithAttachments;
+import org.pspace.common.api.ObjectWithID;
+import org.pspace.common.web.dao.RepositoryDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +17,7 @@ import javax.jcr.*;
 import javax.jcr.query.Query;
 import javax.jcr.query.Row;
 import javax.jcr.query.RowIterator;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -26,16 +28,55 @@ import java.util.List;
 @Service("repositoryDao")
 public class RepositoryDaoJackrabbit implements RepositoryDao {
 
-    private static final String THUMBNAIL_PREFIX = "th_";
     private final Logger log = LoggerFactory.getLogger(RepositoryDaoJackrabbit.class);
+
+    private static final String THUMBNAIL_PREFIX = "th_";
+    private static final String IGNORES_FILES_REGEX = "(\\.DS_Store|\\._\\.DS_Store|\\._.*)";
 
     @Autowired
     private JcrTemplate jcrTemplate;
 
-    private final static String IGNORES_FILES_REGEX = "(\\.DS_Store|\\._\\.DS_Store|\\._.*)";
-
 //    private final static String ATTACHMENT_FOLDER = "attachments";
 //    private final static String GALLERY_FOLDER = "gallery";
+
+    @Override
+    @Transactional
+    public void importDirectory(String fileName) throws IOException, RepositoryException {
+        traverse(new File(fileName), jcrTemplate.getRootNode(), true);
+
+    }
+
+    private void traverse(final File f, Node parentNode, boolean isRoot) throws IOException, RepositoryException {
+        if (f.isDirectory()) {
+            // process directory
+            final Node newParentNode;
+            if (!isRoot) {
+                newParentNode = getOrCreateFolder(true, parentNode, f.getName());
+            } else {
+                newParentNode = parentNode;
+            }
+            final File[] childs = f.listFiles();
+            if (childs != null) {
+                for (File child : childs) {
+                    // descend in recursion
+                    if (!child.getName().matches(IGNORES_FILES_REGEX)) {
+                        traverse(child, newParentNode, false);
+                    }
+                }
+            }
+        } else {
+            // process file
+            InputStream is = null;
+            try {
+                is = new BufferedInputStream(new FileInputStream(f));
+                String name = f.getName();
+                log.info(String.format("Saving file %s in folder %s", f.getPath(), parentNode.getPath()));
+                saveInputStream(parentNode, is, name, null);
+            } finally {
+                if (is != null) is.close();
+            }
+        }
+    }
 
     @Override
     public List<SearchResult> search(String q) throws RepositoryException {
@@ -71,7 +112,6 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                 results.add(r);
             }
 
-
             return results;
         } finally {
             if (session != null) session.logout();
@@ -94,60 +134,57 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
         Node rootNode = jcrTemplate.getRootNode();
 
         String entityFolderName = objectWithID.getClass().getSimpleName().toLowerCase();
-        final Node entityFolder;
-        if (rootNode.hasNode(entityFolderName)) {
-            entityFolder = rootNode.getNode(entityFolderName);
-        } else {
-            if (createIfNotExists) {
-                entityFolder = rootNode.addNode(entityFolderName, "nt:folder");
-            } else {
-                return null;
-            }
-        }
+        final Node entityFolder = getOrCreateFolder(createIfNotExists, rootNode, entityFolderName);
+
+        if (entityFolder == null) return null;
 
         String objectFolderName = objectWithID.getId().toString();
 
-        if (entityFolder.hasNode(objectFolderName)) {
-            return entityFolder.getNode(objectFolderName);
+        return getOrCreateFolder(createIfNotExists, entityFolder, objectFolderName);
+    }
+
+    private Node getOrCreateFolder(boolean createIfNotExists, Node node, String folderName) throws RepositoryException {
+        if (node.hasNode(folderName)) {
+            return node.getNode(folderName);
         } else {
             if (createIfNotExists) {
-                return entityFolder.addNode(objectFolderName, "nt:folder");
+                log.debug("Creating new folder " + folderName + " below node " + node.getPath());
+                return node.addNode(folderName, "nt:folder");
             } else {
                 return null;
             }
-
         }
     }
 
-    private void save(ObjectWithID objectWithID, MultipartFile multipartFile) throws RepositoryException, IOException {
+    private void saveInputStream(Node parentFolder, InputStream inputStream, String fileName, String mimeType) throws RepositoryException {
+        assert parentFolder != null;
 
-        Node objectFolder = getFolderForObject(objectWithID, true);
-
-        assert objectFolder != null;
-
-        Node file = objectFolder.addNode(multipartFile.getOriginalFilename(), "nt:file");
+        Node file = parentFolder.addNode(fileName, "nt:file");
         file.addMixin("mix:lockable");
 
         Node resource = file.addNode("jcr:content", "nt:resource");
-        resource.setProperty("jcr:data", jcrTemplate.getValueFactory().createBinary(multipartFile.getInputStream()));
-        resource.setProperty("jcr:mimeType", multipartFile.getContentType(), PropertyType.STRING);
+        resource.setProperty("jcr:data", jcrTemplate.getValueFactory().createBinary(inputStream));
+        if (mimeType != null) resource.setProperty("jcr:mimeType", "", PropertyType.STRING);
         resource.setProperty("jcr:lastModified", Calendar.getInstance());
 
-        log.info("Saving file {}" + file.getPath());
+        log.info("Saving file {}", file.getPath());
 
         jcrTemplate.save();
     }
 
+
     @Transactional
     @Override
     public void saveAttachment(ObjectWithID objectWithID, MultipartFile multipartFile) throws RepositoryException, IOException {
-        save(objectWithID, multipartFile);
-    }
 
-    private Node getOrCreateFolder(Node node, String folderName) throws RepositoryException {
-        return node.hasNode(folderName) ?
-                node.getNode(folderName) :
-                node.addNode(folderName, "nt:folder");
+        Node objectFolder = getFolderForObject(objectWithID, true);
+        String originalFilename = multipartFile.getOriginalFilename();
+        String mimeType = multipartFile.getContentType();
+        InputStream inputStream = multipartFile.getInputStream();
+
+        saveInputStream(objectFolder, inputStream, originalFilename, mimeType);
+
+        jcrTemplate.save();
     }
 
     @Override
@@ -209,7 +246,6 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                         }
 
                         fileNames.add(fileInfo);
-
                     }
                 }
             }

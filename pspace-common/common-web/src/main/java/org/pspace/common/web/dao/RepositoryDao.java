@@ -2,6 +2,7 @@ package org.pspace.common.web.dao;
 
 import org.pspace.common.api.*;
 import org.pspace.common.web.dao.jackrabbit.SearchResult;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.jcr.RepositoryException;
@@ -26,4 +27,6 @@ public interface RepositoryDao {
 
     void populateObjectWithFileInfos(ObjectWithAttachments objectWithAttachments);
 
+    @Transactional
+    void importDirectory(String fileName) throws IOException, RepositoryException;
 }
