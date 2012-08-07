@@ -5,6 +5,7 @@ import org.pspace.common.api.ImageFileInfo;
 import org.pspace.common.api.ObjectWithAttachments;
 import org.pspace.common.api.ObjectWithID;
 import org.pspace.common.web.dao.RepositoryDao;
+import org.pspace.common.web.mvc.MimeTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,7 +72,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                 is = new BufferedInputStream(new FileInputStream(f));
                 String name = f.getName();
                 log.info(String.format("Saving file %s in folder %s", f.getPath(), parentNode.getPath()));
-                saveInputStream(parentNode, is, name, null);
+                saveInputStream(parentNode, is, name);
             } finally {
                 if (is != null) is.close();
             }
@@ -154,6 +155,11 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                 return null;
             }
         }
+    }
+
+    private void saveInputStream(Node parentFolder, InputStream inputStream, String fileName) throws RepositoryException {
+        String mimeType = MimeTypeUtils.getMimeTypeFromFileName(fileName);
+        saveInputStream(parentFolder, inputStream, fileName, mimeType);
     }
 
     private void saveInputStream(Node parentFolder, InputStream inputStream, String fileName, String mimeType) throws RepositoryException {
