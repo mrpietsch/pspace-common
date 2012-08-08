@@ -203,7 +203,8 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
             boolean changes = false;
 
             NodeIterator nodeIt = folder.getNodes();
-            List<ImageFileInfo> fileNames = new ArrayList<ImageFileInfo>();
+            List<ImageFileInfo> imageFileNames = new ArrayList<ImageFileInfo>();
+            List<FileInfo> regularFileNames = new ArrayList<FileInfo>();
             while (nodeIt.hasNext()) {
                 Node fileNode = nodeIt.nextNode();
 
@@ -214,12 +215,13 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                     if (resourceNode.hasProperty("jcr:mimeType")) {
                         String mimeType = resourceNode.getProperty("jcr:mimeType").getString();
 
-                        ImageFileInfo fileInfo = new ImageFileInfo();
-                        fileInfo.setName(fileNode.getName());
-                        fileInfo.setPath(fileNode.getPath());
-                        fileInfo.setMimeType(mimeType);
-
                         if (mimeType.startsWith("image/")) {
+
+                            ImageFileInfo fileInfo = new ImageFileInfo();
+                            fileInfo.setName(fileNode.getName());
+                            fileInfo.setPath(fileNode.getPath());
+                            fileInfo.setMimeType(mimeType);
+
                             // look if there is a thumbnail and create one if not
                             String thumbName = THUMBNAIL_PREFIX + fileNode.getName();
                             final Node thumbFile;
@@ -249,13 +251,23 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                             }
 
                             fileInfo.setThumbnailPath(thumbFile.getPath());
-                        }
 
-                        fileNames.add(fileInfo);
+                            imageFileNames.add(fileInfo);
+                        } else {
+                            // regular file
+                            FileInfo fileInfo = new FileInfo();
+                            fileInfo.setName(fileNode.getName());
+                            fileInfo.setPath(fileNode.getPath());
+                            fileInfo.setMimeType(mimeType);
+
+                            regularFileNames.add(fileInfo);
+                        }
                     }
                 }
             }
-            objectWithAttachments.setImages(fileNames);
+
+            objectWithAttachments.setImages(imageFileNames);
+            objectWithAttachments.setAttachments(regularFileNames);
 
             if (changes) {
                 jcrTemplate.save();
