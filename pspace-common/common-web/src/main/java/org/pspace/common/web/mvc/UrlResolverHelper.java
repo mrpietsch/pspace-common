@@ -1,6 +1,7 @@
 package org.pspace.common.web.mvc;
 
 import org.springframework.beans.DirectFieldAccessor;
+import org.springframework.beans.NotReadablePropertyException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -89,13 +90,17 @@ public class UrlResolverHelper {
 
                 for (Annotation paramAnn : paramAnns) {
                     if (RequestParam.class.isInstance(paramAnn)) {
-                        RequestParam requestParam = (RequestParam) paramAnn;
-                        // TODO only required parameters
-                        String param = requestParam.value();
-                        String encodedValue = getValueOfParam(param, o);
-                        queryParams.append(param);
-                        queryParams.append("=");
-                        queryParams.append(encodedValue);
+                        try {
+                            RequestParam requestParam = (RequestParam) paramAnn;
+                            // TODO only required parameters
+                            String param = requestParam.value();
+                            String encodedValue = getValueOfParam(param, o);
+                            queryParams.append(param);
+                            queryParams.append("=");
+                            queryParams.append(encodedValue);
+                        } catch (NotReadablePropertyException e) {
+                            // do nothing, obviously not a property of the object
+                        }
                     }
                 }
             }
