@@ -170,7 +170,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
         Node resource = file.addNode("jcr:content", "nt:resource");
         resource.setProperty("jcr:data", jcrTemplate.getValueFactory().createBinary(inputStream));
-        if (mimeType != null) resource.setProperty("jcr:mimeType", "", PropertyType.STRING);
+        if (mimeType != null) resource.setProperty("jcr:mimeType", mimeType, PropertyType.STRING);
         resource.setProperty("jcr:lastModified", Calendar.getInstance());
 
         log.info("Saving file {}", file.getPath());
