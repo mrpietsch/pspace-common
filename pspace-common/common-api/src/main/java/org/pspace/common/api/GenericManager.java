@@ -11,7 +11,6 @@ import java.util.List;
  * <p>Extend this interface if you want typesafe (no casting necessary) managers
  * for your domain objects.
  *
- * @author <a href="mailto:matt@raibledesigns.com">Matt Raible</a>
  * @param <T> a type variable
  * @param <PK> the primary key for that type
  */
