@@ -2,3 +2,5 @@ target
 *.iml
 .idea
 .project
+.DS_Store
+*~
