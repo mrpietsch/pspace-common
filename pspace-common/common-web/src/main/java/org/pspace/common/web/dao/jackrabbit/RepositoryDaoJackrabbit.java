@@ -14,10 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springmodules.jcr.JcrTemplate;
 
+import javax.imageio.ImageIO;
 import javax.jcr.*;
 import javax.jcr.query.Query;
 import javax.jcr.query.Row;
 import javax.jcr.query.RowIterator;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -33,6 +36,17 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
     private static final String THUMBNAIL_PREFIX = "th_";
     private static final String IGNORES_FILES_REGEX = "(\\.DS_Store|\\._\\.DS_Store|\\._.*)";
+
+    private int maxThumbnailHeight = 50;
+    private int maxThumbnailWidth = 100;
+
+    public void setMaxThumbnailHeight(int maxThumbnailHeight) {
+        this.maxThumbnailHeight = maxThumbnailHeight;
+    }
+
+    public void setMaxThumbnailWidth(int maxThumbnailWidth) {
+        this.maxThumbnailWidth = maxThumbnailWidth;
+    }
 
     @Autowired
     private JcrTemplate jcrTemplate;
@@ -237,7 +251,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                                 Binary binary = contentProperty.getBinary();
 
                                 // resize the image
-                                Binary thumbImage = resizeImage(binary);
+                                Binary thumbImage = resizeImage(binary, mimeType);
 
                                 Node resource = thumbFile.addNode("jcr:content", "nt:resource");
                                 resource.setProperty("jcr:data", thumbImage);
@@ -276,18 +290,51 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
         } catch (RepositoryException e) {
             log.error(e.getMessage(), e);
             throw new RuntimeException(e);
+        } catch (IOException e) {
+            log.error(e.getMessage(), e);
+            throw new RuntimeException(e);
         }
 
     }
 
-    private Binary resizeImage(Binary binary) throws RepositoryException {
+    private Binary resizeImage(Binary binary, String mimeType) throws RepositoryException, IOException {
 
-        // InputStream imageInputStream = binary.getStream();
+        InputStream imageInputStream = binary.getStream();
+        BufferedImage originalImage = ImageIO.read(imageInputStream);
+        int type = originalImage.getType() == 0 ? BufferedImage.TYPE_INT_ARGB : originalImage.getType();
 
-        // TODO implement resizeImage
+        double maxSquarePixel = maxThumbnailHeight * maxThumbnailWidth;
+        double originalRatio = (double) originalImage.getHeight() / (double) originalImage.getWidth();
 
-        return binary;
+        // We want the thumbnail to have a maximum area and to have the same ratio as the original
+        // (1) thumbSquarePixel = maxSquarePixel
+        // (2) thumbRatio = originalRatio
 
+        // Definitions:
+        // (3) thumbWidth * thumbHeight = maxSquarePixel
+        // (4) thumbHeight / thumbWidth = originalRatio
+
+        // Derived from the system of equations above we have to calculate:
+        int thumbWidth = (int) Math.round(Math.sqrt(maxSquarePixel / originalRatio));
+        int thumbHeight = (int) Math.round(Math.sqrt(maxSquarePixel * originalRatio));
+
+        // actually resizing the image
+        BufferedImage resizedImage = new BufferedImage(thumbWidth, thumbHeight, type);
+        Graphics2D g = resizedImage.createGraphics();
+        g.drawImage(originalImage, 0, 0, thumbWidth, thumbHeight, null);
+        g.dispose();
+        g.setComposite(AlphaComposite.Src);
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.setRenderingHint(RenderingHints.KEY_RENDERING,RenderingHints.VALUE_RENDER_QUALITY);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // providing the image in an InputStream
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        ImageIO.write(resizedImage, "jpg", os);
+        InputStream is = new ByteArrayInputStream(os.toByteArray());
+
+        // create and return a binary from the InputStream
+        return jcrTemplate.getValueFactory().createBinary(is);
     }
 
     @Transactional()
