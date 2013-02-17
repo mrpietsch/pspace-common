@@ -130,13 +130,20 @@
         <dependency>
             <groupId>org.apache.directory.server</groupId>
             <artifactId>apacheds-all</artifactId>
+            <version>2.0.0-M10</version>
             <exclusions>
-                <!-- Workaround for issue https://issues.apache.org/jira/browse/DIRSERVER-1606 -->
                 <exclusion>
-                    <groupId>org.apache.directory.shared</groupId>
-                    <artifactId>shared-ldap-schema</artifactId>
+                    <groupId>org.apache.directory.studio</groupId>
+                    <artifactId>org.apache.commons.logging</artifactId>
                 </exclusion>
             </exclusions>
+            <!--<exclusions>-->
+                <!--&lt;!&ndash; Workaround for issue https://issues.apache.org/jira/browse/DIRSERVER-1606 &ndash;&gt;-->
+                <!--<exclusion>-->
+                    <!--<groupId>org.apache.directory.shared</groupId>-->
+                    <!--<artifactId>shared-ldap-schema</artifactId>-->
+                <!--</exclusion>-->
+            <!--</exclusions>-->
         </dependency>
     </dependencies>
     <properties>
