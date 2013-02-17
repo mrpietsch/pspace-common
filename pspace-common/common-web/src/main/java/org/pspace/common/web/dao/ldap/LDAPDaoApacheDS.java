@@ -1,8 +1,14 @@
 package org.pspace.common.web.dao.ldap;
 
+import org.apache.directory.api.ldap.model.entry.DefaultModification;
 import org.apache.directory.api.ldap.model.entry.Entry;
+import org.apache.directory.api.ldap.model.entry.Modification;
+import org.apache.directory.api.ldap.model.entry.ModificationOperation;
+import org.apache.directory.api.ldap.model.exception.LdapException;
+import org.apache.directory.api.ldap.model.exception.LdapNoSuchObjectException;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.server.core.annotations.CreateDS;
+import org.apache.directory.server.core.api.CoreSession;
 import org.apache.directory.server.core.api.DirectoryService;
 import org.apache.directory.server.core.api.partition.Partition;
 import org.apache.directory.server.core.factory.DefaultDirectoryServiceFactory;
@@ -24,7 +30,10 @@ import java.io.File;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created at 08.12.11 - 07:30
@@ -60,7 +69,6 @@ public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBea
         directoryService.shutdown();
         ldapServer.stop();
     }
-
 
 
     public void afterPropertiesSet() throws Exception {
@@ -135,39 +143,80 @@ public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBea
     @Override
     public void updatePerson(Person person) {
         try {
+
             String trim = person.getFullName().trim();
             Dn memberDn = new Dn("cn=" + trim + "," + rootDn);
 
-            Entry memberEntry = directoryService.newEntry(memberDn);
-            memberEntry.add("objectClass", "top", "person", "inetOrgPerson", "organizationalPerson");
-            memberEntry.add("employeeNumber", "" + person.getId());
-            memberEntry.add("cn", trim);
-            memberEntry.add("displayName", trim);
-            memberEntry.add("givenName", person.getPrename());
-            memberEntry.add("sn", person.getLastname());
-            memberEntry.add("o", person.getOrganizationName());
-//            memberEntry.add("countryName", "Germany");
+            // check if the entry already exists
 
-            if (person.getOrganizationalUnitName() != null && !person.getOrganizationalUnitName().isEmpty()) memberEntry.add("ou", person.getOrganizationalUnitName());
-            if (person.getUsername() != null && !person.getUsername().isEmpty()) memberEntry.add("uid", person.getUsername());
-            if (person.getPassword() != null && !person.getPassword().isEmpty()) memberEntry.add("userpassword", encodePass(person.getPassword()));
-            if (person.getPrefix() != null && !person.getPrefix().isEmpty()) memberEntry.add("title", person.getPrefix());
-            if (person.getEmail() != null && !person.getEmail().isEmpty()) memberEntry.add("mail", person.getEmail());
-            if (person.getPhone() != null && !person.getPhone().isEmpty()) {
-                PHONE_EDITOR.setAsText(person.getPhone());
-                memberEntry.add("telephoneNumber", PHONE_EDITOR.getValue().toString());
+            CoreSession adminSession = directoryService.getAdminSession();
+            Entry memberEntry = null;
+            try {
+                memberEntry = adminSession.lookup(memberDn);
+            } catch (LdapNoSuchObjectException e) {
+                // nothing
             }
-            if (person.getMobile() != null && !person.getMobile().isEmpty()) {
-                PHONE_EDITOR.setAsText(person.getMobile());
-                memberEntry.add("mobile", PHONE_EDITOR.getValue().toString());
+            Map<String, String> updates = getUpdateMapFromPerson(person, trim);
+
+            if (memberEntry != null) {
+                ArrayList<Modification> modifications = new ArrayList<Modification>();
+                for (Map.Entry<String, String> entry : updates.entrySet()) {
+                    modifications.add(new DefaultModification(ModificationOperation.REPLACE_ATTRIBUTE, entry.getKey(), entry.getValue()));
+                }
+
+                adminSession.modify(memberDn, modifications);
+            } else {
+                memberEntry = directoryService.newEntry(memberDn);
+                memberEntry.add("objectClass", "top", "person", "inetOrgPerson", "organizationalPerson");
+
+                for (Map.Entry<String, String> entry : updates.entrySet()) {
+                    memberEntry.add(entry.getKey(), entry.getValue());
+                }
+
+                adminSession.add(memberEntry);
             }
-            if (person.getStreet() != null && !person.getStreet().isEmpty()) memberEntry.add("street", person.getStreet());
-            if (person.getCity() != null && !person.getCity().isEmpty()) memberEntry.add("l", person.getCity());
-            if (person.getPostalCode() != null && !person.getPostalCode().isEmpty()) memberEntry.add("postalCode", person.getPostalCode());
-            directoryService.getAdminSession().add(memberEntry);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Map<String, String> getUpdateMapFromPerson(Person person, String fullName) {
+
+        Map<String, String> updates = new HashMap<String, String>();
+
+        updates.put("employeeNumber", "" + person.getId());
+        updates.put("cn", fullName);
+        updates.put("displayName", fullName);
+        updates.put("givenName", person.getPrename());
+        updates.put("sn", person.getLastname());
+        updates.put("o", person.getOrganizationName());
+//                updates.put("countryName", "Germany");
+
+        if (person.getOrganizationalUnitName() != null && !person.getOrganizationalUnitName().isEmpty())
+            updates.put("ou", person.getOrganizationalUnitName());
+        if (person.getUsername() != null && !person.getUsername().isEmpty())
+            updates.put("uid", person.getUsername());
+        if (person.getPassword() != null && !person.getPassword().isEmpty())
+            updates.put("userpassword", encodePass(person.getPassword()));
+        if (person.getPrefix() != null && !person.getPrefix().isEmpty())
+            updates.put("title", person.getPrefix());
+        if (person.getEmail() != null && !person.getEmail().isEmpty())
+            updates.put("mail", person.getEmail());
+        if (person.getPhone() != null && !person.getPhone().isEmpty()) {
+            PHONE_EDITOR.setAsText(person.getPhone());
+            updates.put("telephoneNumber", PHONE_EDITOR.getValue().toString());
+        }
+        if (person.getMobile() != null && !person.getMobile().isEmpty()) {
+            PHONE_EDITOR.setAsText(person.getMobile());
+            updates.put("mobile", PHONE_EDITOR.getValue().toString());
+        }
+        if (person.getStreet() != null && !person.getStreet().isEmpty())
+            updates.put("street", person.getStreet());
+        if (person.getCity() != null && !person.getCity().isEmpty()) updates.put("l", person.getCity());
+        if (person.getPostalCode() != null && !person.getPostalCode().isEmpty())
+            updates.put("postalCode", person.getPostalCode());
+
+        return updates;
     }
 
     private static String encodePass(String password) {
