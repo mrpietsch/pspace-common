@@ -38,6 +38,7 @@ public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBea
     private final static String PW_ENCODING_ALGORITHM = "SHA";
 
     private static final PhoneEditor PHONE_EDITOR = new PhoneEditor();
+    public static final int CACHE_SIZE = 100;
 
     private String rootDomain;
     private String rootDn;
@@ -81,7 +82,8 @@ public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBea
 
             PartitionFactory partitionFactory = factory.getPartitionFactory();
 
-            Partition partition = partitionFactory.createPartition(directoryService.getSchemaManager(), rootDc, rootDn, 0, getTempDir());
+            Partition partition = partitionFactory.createPartition(directoryService.getSchemaManager(), rootDc, rootDn, CACHE_SIZE, getTempDir());
+
 //
 //            Partition partition = new JdbmPartition(directoryService.getSchemaManager());
 //            partition.setId(rootDc);
