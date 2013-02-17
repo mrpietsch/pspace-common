@@ -2,6 +2,9 @@ package org.pspace.common.web.dao.ldap;
 
 import org.apache.directory.server.constants.ServerDNConstants;
 import org.apache.directory.server.core.DefaultDirectoryService;
+import org.apache.directory.server.core.DirectoryService;
+import org.apache.directory.server.core.factory.DefaultDirectoryServiceFactory;
+import org.apache.directory.server.core.factory.DirectoryServiceFactory;
 import org.apache.directory.server.core.partition.Partition;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmIndex;
 import org.apache.directory.server.core.partition.impl.btree.jdbm.JdbmPartition;
@@ -21,6 +24,8 @@ import org.apache.directory.shared.ldap.schema.registries.SchemaLoader;
 import org.pspace.common.api.Person;
 import org.pspace.common.web.dao.LDAPDao;
 import org.pspace.common.web.mvc.PhoneEditor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.StringUtils;
@@ -43,6 +48,8 @@ import java.util.List;
  */
 public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBean {
 
+    private static final Logger log = LoggerFactory.getLogger(LDAPDaoApacheDS.class);
+
     private final static String PW_ENCODING_ALGORITHM = "SHA";
 
     private static final PhoneEditor PHONE_EDITOR = new PhoneEditor();
@@ -50,7 +57,7 @@ public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBea
     private String rootDomain;
     private String rootDn;
 
-    private DefaultDirectoryService directoryService;
+    private DirectoryService directoryService;
     private LdapServer ldapServer;
     private int port = 10389;
 
@@ -145,54 +152,59 @@ public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBea
 
 
     public void afterPropertiesSet() throws Exception {
+        try {
 
-        // example.com
-        String[] rootDnParts = rootDomain.split("\\.");
-        assert rootDnParts.length >= 1;
-        // dc=example,dc=com
-        rootDn = StringUtils.collectionToDelimitedString(Arrays.asList(rootDnParts),",","dc=","");
-        // example
-        String rootDc = rootDnParts[0];
+            // example.com
+            String[] rootDnParts = rootDomain.split("\\.");
+            assert rootDnParts.length >= 1;
+            // dc=example,dc=com
+            rootDn = StringUtils.collectionToDelimitedString(Arrays.asList(rootDnParts), ",", "dc=", "");
+            // example
+            String rootDc = rootDnParts[0];
 
-        directoryService = new DefaultDirectoryService();
-//        directoryService.setShutdownHookEnabled(true);
-        directoryService.setWorkingDirectory(getTempDir());
+            directoryService = new DefaultDirectoryService();
+            directoryService.setShutdownHookEnabled(true);
+            directoryService.setWorkingDirectory(getTempDir());
 
-        // first load the schema
-        initSchemaPartition();
+            // first load the schema
+            initSchemaPartition();
 
-        // then the system partition -- this is a MANDATORY partition
-        Partition systemPartition = addPartition( "system", ServerDNConstants.SYSTEM_DN );
-        directoryService.setSystemPartition( systemPartition );
+            // then the system partition -- this is a MANDATORY partition
+            Partition systemPartition = addPartition("system", ServerDNConstants.SYSTEM_DN);
+            directoryService.setSystemPartition(systemPartition);
 
-        // Disable the ChangeLog system
-        directoryService.getChangeLog().setEnabled( false );
-        directoryService.setDenormalizeOpAttrsEnabled( true );
+            // Disable the ChangeLog system
+            directoryService.getChangeLog().setEnabled(false);
+            directoryService.setDenormalizeOpAttrsEnabled(true);
 
-        // Now we can create as many partitions as we need
-        JdbmPartition partition =  addPartition(rootDc, rootDn);
+            // Now we can create as many partitions as we need
+            JdbmPartition partition = addPartition(rootDc, rootDn);
 
-        // Index some attributes on the apache partition
-        addIndex(partition, "objectClass", "ou", "uid");
+            // Index some attributes on the apache partition
+            addIndex(partition, "objectClass", "ou", "uid");
 
-        // start the service
-        directoryService.startup();
+            // start the service
+            directoryService.startup();
 
-        // create the root entry
-        if (!directoryService.getAdminSession().exists(partition.getSuffixDn())) {
-            DN dnApache = new DN(rootDn);
-            ServerEntry entryApache = directoryService.newEntry(dnApache);
-            entryApache.add("objectClass", "top", "domain", "extensibleObject");
-            entryApache.add("dc", rootDc);
-            directoryService.getAdminSession().add(entryApache);
+            // create the root entry
+            if (!directoryService.getAdminSession().exists(partition.getSuffixDn())) {
+                DN dnApache = new DN(rootDn);
+                ServerEntry entryApache = directoryService.newEntry(dnApache);
+                entryApache.add("objectClass", "top", "domain", "extensibleObject");
+                entryApache.add("dc", rootDc);
+                directoryService.getAdminSession().add(entryApache);
+            }
+
+            // start the actual server that listens on the port
+            ldapServer = new LdapServer();
+            ldapServer.setDirectoryService(directoryService);
+            ldapServer.setTransports(new TcpTransport(port));
+            ldapServer.setAllowAnonymousAccess(true);
+            ldapServer.start();
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
         }
-
-        // start the actual server that listens on the port
-        ldapServer = new LdapServer();
-        ldapServer.setDirectoryService(directoryService);
-        ldapServer.setTransports(new TcpTransport(port));
-        ldapServer.setAllowAnonymousAccess(true);
-        ldapServer.start();
 
     }
 
