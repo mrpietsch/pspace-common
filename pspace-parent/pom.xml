@@ -18,7 +18,7 @@
         <tiles.version>2.2.2</tiles.version>
         <compass.version>2.2.0</compass.version>
         <lucene.version>2.4.1</lucene.version>
-        <jackrabbit.version>2.2.9</jackrabbit.version>
+        <jackrabbit.version>2.2.13</jackrabbit.version>
         <slf4j.version>1.7.2</slf4j.version>
         <ehcache.version>2.5.2</ehcache.version>
     </properties>
@@ -346,7 +346,7 @@
             <dependency>
                 <groupId>org.mnode.ical4j</groupId>
                 <artifactId>ical4j</artifactId>
-                <version>1.0.2</version>
+                <version>1.0.4</version>
             </dependency>
             <dependency>
                 <groupId>net.sf.textile4j</groupId>
