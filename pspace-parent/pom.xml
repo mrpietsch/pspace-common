@@ -19,6 +19,7 @@
         <compass.version>2.2.0</compass.version>
         <lucene.version>2.4.1</lucene.version>
         <jackrabbit.version>2.2.13</jackrabbit.version>
+        <slf4j.version>1.6.1</slf4j.version>
         <ehcache.version>2.5.2</ehcache.version>
     </properties>
 
@@ -64,6 +65,29 @@
                 <artifactId>logback-classic</artifactId>
                 <version>1.0.11</version>
             </dependency>
+
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+                <scope>runtime</scope>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jcl-over-slf4j</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <!--<dependency>-->
+                <!--<groupId>org.slf4j</groupId>-->
+                <!--<artifactId>log4j-over-slf4j</artifactId>-->
+                <!--<version>${slf4j.version}</version>-->
+            <!--</dependency>-->
+
 
             <dependency>
                 <groupId>org.springframework</groupId>
