@@ -12,7 +12,7 @@
     <artifactId>common-api</artifactId>
 
     <name>common-api</name>
-    <url>http://maven.apache.org</url>
+
     <dependencies>
         <dependency>
             <groupId>org.hibernate.javax.persistence</groupId>

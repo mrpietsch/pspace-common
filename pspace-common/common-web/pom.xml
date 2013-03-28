@@ -12,7 +12,7 @@
     <artifactId>common-web</artifactId>
 
     <name>common-web</name>
-    <url>http://maven.apache.org</url>
+
     <dependencies>
         <dependency>
             <groupId>org.pspace</groupId>
