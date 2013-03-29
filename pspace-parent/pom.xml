@@ -4,7 +4,7 @@
 
     <groupId>org.pspace</groupId>
     <artifactId>pspace-parent</artifactId>
-    <version>1.0.2-SNAPSHOT</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>P-Space Parent POM</name>
