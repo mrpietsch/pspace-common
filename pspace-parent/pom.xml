@@ -10,6 +10,11 @@
 
     <name>P-Space Parent POM</name>
 
+    <scm>
+        <connection>scm:git:ssh://peach@p-space.org/srv/git/pspace-common.git</connection>
+        <developerConnection>scm:git:ssh://peach@p-space.org/srv/git/pspace-common.git</developerConnection>
+    </scm>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring.version>3.1.2.RELEASE</spring.version>
