@@ -41,7 +41,7 @@
         </snapshotRepository>
         <site>
             <id>p-space-snapshots</id>
-            <url>dav:http://repo.p-space.org/sites/</url>
+            <url>dav:http://repo.p-space.org/sites/${project.artifactId}/</url>
         </site>
     </distributionManagement>
 
