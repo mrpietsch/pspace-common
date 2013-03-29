@@ -15,6 +15,36 @@
         <developerConnection>scm:git:ssh://peach@p-space.org/srv/git/pspace-common.git</developerConnection>
     </scm>
 
+    <organization>
+        <name>Martin Pietsch</name>
+        <url>http://www.p-space.org</url>
+    </organization>
+
+    <url>http://www.p-space.org</url>
+    <developers>
+        <developer>
+            <id>peach</id>
+            <name>Martin Pietsch</name>
+            <email>martin@p-space.org</email>
+        </developer>
+    </developers>
+
+    <distributionManagement>
+        <repository>
+            <id>p-space-releases</id>
+            <url>dav:http://repo.p-space.org/maven-releases/</url>
+            <uniqueVersion>true</uniqueVersion>
+        </repository>
+        <snapshotRepository>
+            <id>p-space-snapshots</id>
+            <url>dav:http://repo.p-space.org/maven-snapshots/</url>
+        </snapshotRepository>
+        <site>
+            <id>p-space-snapshots</id>
+            <url>dav:http://repo.p-space.org/sites/</url>
+        </site>
+    </distributionManagement>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring.version>3.1.2.RELEASE</spring.version>
@@ -568,6 +598,14 @@
                 <filtering>true</filtering>
             </resource>
         </resources>
+
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-webdav-jackrabbit</artifactId>
+                <version>1.0-beta-7</version>
+            </extension>
+        </extensions>
 
         <pluginManagement>
             <plugins>
