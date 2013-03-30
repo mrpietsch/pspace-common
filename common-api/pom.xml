@@ -9,6 +9,11 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
+    <scm>
+        <connection>scm:git:ssh://peach@p-space.org/srv/git/common-web.git/common-parent/common-web</connection>
+        <developerConnection>scm:git:ssh://peach@p-space.org/srv/git/common-web.git/common-parent/common-web</developerConnection>
+    </scm>
+
     <artifactId>common-api</artifactId>
 
     <name>common-api</name>
