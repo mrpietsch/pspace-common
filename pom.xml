@@ -19,13 +19,6 @@
         <developerConnection>scm:git:ssh://peach@p-space.org/srv/git/pspace-common.git</developerConnection>
     </scm>
 
-    <distributionManagement>
-        <site>
-            <id>p-space-snapshots</id>
-            <url>dav:http://repo.p-space.org/sites/pspace-common/</url>
-        </site>
-    </distributionManagement>
-
     <modules>
         <module>common-util</module>
         <module>common-api</module>
