@@ -15,6 +15,11 @@
 
     <name>common-parent</name>
 
+    <scm>
+        <connection>scm:git:ssh://peach@p-space.org/srv/git/common-web.git/common-parent/common-web</connection>
+        <developerConnection>scm:git:ssh://peach@p-space.org/srv/git/common-web.git/common-parent/common-web</developerConnection>
+    </scm>
+
     <modules>
         <module>common-util</module>
         <module>common-api</module>
