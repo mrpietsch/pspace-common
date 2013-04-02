@@ -82,6 +82,68 @@ public class LDAPDaoApacheDSTest {
         }
     };
 
+    Person testPersonMod = new Person() {
+        public String getFullName() {
+            return testPerson.getFullName();
+        }
+
+        public Number getId() {
+            return testPerson.getId();
+        }
+
+        public String getPrefix() {
+            return null;
+        }
+
+        public String getPrename() {
+            return testPerson.getPrename();
+        }
+
+        public String getLastname() {
+            return testPerson.getLastname();
+        }
+
+        public String getPassword() {
+            return testPerson.getPassword();
+        }
+
+        public String getOrganizationalUnitName() {
+            return testPerson.getOrganizationalUnitName();
+        }
+
+        public String getOrganizationName() {
+            return testPerson.getOrganizationName();
+        }
+
+        public String getUsername() {
+            return testPerson.getUsername();
+        }
+
+        public String getEmail() {
+            return testPerson.getEmail();
+        }
+
+        public String getPhone() {
+            return testPerson.getPhone();
+        }
+
+        public String getMobile() {
+            return testPerson.getMobile();
+        }
+
+        public String getStreet() {
+            return testPerson.getStreet();
+        }
+
+        public String getPostalCode() {
+            return testPerson.getPostalCode();
+        }
+
+        public String getCity() {
+            return testPerson.getCity();
+        }
+    };
+
     @Test
     public void testSetupService() throws Exception {
 
@@ -92,7 +154,10 @@ public class LDAPDaoApacheDSTest {
 
         ldapDaoApacheDS.updatePerson(testPerson);
 
-        ldapDaoApacheDS.updatePerson(testPerson);
+        ldapDaoApacheDS.updatePerson(testPersonMod);
+
+
+
 
     }
 }
