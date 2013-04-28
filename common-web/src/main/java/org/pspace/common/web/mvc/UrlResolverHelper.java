@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
  */
 public class UrlResolverHelper {
 
-    private final static Pattern PATTERN = Pattern.compile("\\{(\\w+)\\}");
+    private final static Pattern PATTERN = Pattern.compile("\\{(\\w+)(:.*?)?\\}");
 
     public static String resolveUrlByControllerMethod(Class<?> controllerClass, String methodName, Object o) {
         for (Method m : controllerClass.getMethods()) {
@@ -161,7 +161,10 @@ public class UrlResolverHelper {
     private static String getValueOfParam(String param, Object o) {
         DirectFieldAccessor accessor = new DirectFieldAccessor(o);
         String value = accessor.getPropertyValue(param).toString();
-        return URLEncoder.encode(value).replace("+", "%20");
+        // Spring's @RequestMapping cannot match the '/' in @PathVariables (not even with a specified regex like .*)
+        // so we replace all slashed --> you better do not rely on text values which may contain slashes in your program
+        String valueWithOutSlashes = value.replace('/','-');
+        return URLEncoder.encode(valueWithOutSlashes).replace("+", "%20");
     }
 
 }
