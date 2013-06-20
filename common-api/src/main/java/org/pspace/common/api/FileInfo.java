@@ -4,7 +4,7 @@ package org.pspace.common.api;
  * @author mrpietsch
  */
 
-public class FileInfo {
+public class FileInfo implements Comparable<FileInfo> {
 
     private String name;
     private String path;
@@ -50,5 +50,10 @@ public class FileInfo {
 
     public boolean isImage() {
         return (mimeType != null && mimeType.startsWith("image/")) || name.matches(".*\\.(jpg|png|gif|JPG|PNG|GIF)");
+    }
+
+    @Override
+    public int compareTo(FileInfo o) {
+        return this.name.compareTo(o.name);
     }
 }

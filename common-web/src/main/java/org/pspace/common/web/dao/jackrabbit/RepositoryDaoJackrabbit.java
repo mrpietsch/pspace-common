@@ -24,6 +24,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -279,6 +280,9 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                     }
                 }
             }
+
+            Collections.sort(imageFileNames);
+            Collections.sort(regularFileNames);
 
             objectWithAttachments.setImages(imageFileNames);
             objectWithAttachments.setAttachments(regularFileNames);
