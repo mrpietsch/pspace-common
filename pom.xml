@@ -15,8 +15,8 @@
     <name>common-parent</name>
 
     <scm>
-        <connection>scm:git:ssh://peach@p-space.org/srv/git/pspace-common.git</connection>
-        <developerConnection>scm:git:ssh://peach@p-space.org/srv/git/pspace-common.git</developerConnection>
+        <connection>scm:git:ssh://gitolite@p-space.org/pspace-common.git</connection>
+        <developerConnection>scm:git:ssh://gitolite@p-space.org/pspace-common.git</developerConnection>
     </scm>
 
     <modules>
