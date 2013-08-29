@@ -13,10 +13,20 @@ import javax.servlet.jsp.tagext.TagSupport;
  */
 public class LinkTag extends TagSupport {
 
+    private String title = "";
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
     @Override
     public int doStartTag() throws JspException {
         URLAuthorizingTag parent = (URLAuthorizingTag) findAncestorWithClass(this, URLAuthorizingTag.class);
-        printLinkStart(parent, pageContext);
+        printLinkStart(parent, title, pageContext);
         return Tag.EVAL_BODY_INCLUDE;
     }
 
@@ -27,12 +37,12 @@ public class LinkTag extends TagSupport {
         return super.doEndTag();
     }
 
-    public static void printLinkStart(URLAuthorizingTag authorizingTag, PageContext pageContext) {
+    public static void printLinkStart(URLAuthorizingTag authorizingTag, String title, PageContext pageContext) {
         try {
             if (authorizingTag.isAuthorized()) {
                 String resolvedUrl = UrlSupport.resolveUrl(authorizingTag.getUrl(), null, pageContext);
                 HttpServletResponse response = ((HttpServletResponse) pageContext.getResponse());
-                pageContext.getOut().println(String.format("<a href=\"%s\">", response.encodeURL(resolvedUrl)));
+                pageContext.getOut().println(String.format("<a href=\"%s\" title=\"%s\">", response.encodeURL(resolvedUrl), title));
             }
         } catch (Exception ex) {
             throw new Error(ex.getMessage());

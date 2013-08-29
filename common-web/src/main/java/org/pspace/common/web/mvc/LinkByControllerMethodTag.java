@@ -8,12 +8,22 @@ import javax.servlet.jsp.JspException;
 public class LinkByControllerMethodTag extends AuthByControllerMethodTag {
     private static final long serialVersionUID = -1493357742073187977L;
 
+    private String title;
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
     @Override
     public int doStartTag() throws JspException {
 
         try {
             int superResult = super.doStartTag();
-            LinkTag.printLinkStart(this, pageContext);
+            LinkTag.printLinkStart(this, title, pageContext);
             return superResult;
         } catch (Exception ex) {
             throw new Error(ex.getMessage());
