@@ -1,16 +1,20 @@
 package org.pspace.common.web.dao.hibernate;
 
-import org.pspace.common.api.ObjectWithID;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.queryParser.ParseException;
+import org.apache.lucene.util.Version;
+import org.hibernate.*;
+import org.hibernate.search.FullTextSession;
+import org.hibernate.search.Search;
+import org.hibernate.search.SearchException;
 import org.pspace.common.web.dao.GenericDao;
 import org.springframework.orm.ObjectRetrievalFailureException;
-import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
 
-import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
+import javax.annotation.Resource;
 import java.io.Serializable;
-import java.lang.reflect.Method;
 import java.util.*;
 
 /**
@@ -30,13 +34,17 @@ import java.util.*;
  * @param <T> a type variable
  * @param <PK> the primary key for that type
  */
-public class GenericDaoHibernate<T, PK extends Serializable> extends HibernateDaoSupport implements GenericDao<T, PK> {
+public class GenericDaoHibernate<T, PK extends Serializable> implements GenericDao<T, PK> {
 
     /**
      * Log variable for all child classes. Uses LogFactory.getLog(getClass()) from Commons Logging
      */
     protected final Log log = LogFactory.getLog(getClass());
     private Class<T> persistentClass;
+    private Analyzer defaultAnalyzer = new StandardAnalyzer(Version.LUCENE_36);
+
+    @Resource
+    private SessionFactory sessionFactory;
 
     /**
      * Constructor that takes in a class to see which type of entity to persist
@@ -47,12 +55,13 @@ public class GenericDaoHibernate<T, PK extends Serializable> extends HibernateDa
         this.persistentClass = persistentClass;
     }
 
+
     /**
      * {@inheritDoc}
      */
     @SuppressWarnings("unchecked")
     public List<T> getAll() {
-        return super.getHibernateTemplate().loadAll(this.persistentClass);
+        return getSession().createCriteria(persistentClass).list();
     }
 
     /**
@@ -69,7 +78,9 @@ public class GenericDaoHibernate<T, PK extends Serializable> extends HibernateDa
      */
     @SuppressWarnings("unchecked")
     public T get(PK id) {
-        T entity = (T) super.getHibernateTemplate().get(this.persistentClass, id);
+        Session sess = getSession();
+        IdentifierLoadAccess byId = sess.byId(persistentClass);
+        T entity = (T) byId.load(id);
 
         if (entity == null) {
             log.warn("Uh oh, '" + this.persistentClass + "' object with id '" + id + "' not found...");
@@ -84,7 +95,9 @@ public class GenericDaoHibernate<T, PK extends Serializable> extends HibernateDa
      */
     @SuppressWarnings("unchecked")
     public boolean exists(PK id) {
-        T entity = (T) super.getHibernateTemplate().get(this.persistentClass, id);
+        Session sess = getSession();
+        IdentifierLoadAccess byId = sess.byId(persistentClass);
+        T entity = (T) byId.load(id);
         return entity != null;
     }
 
@@ -93,42 +106,47 @@ public class GenericDaoHibernate<T, PK extends Serializable> extends HibernateDa
      */
     @SuppressWarnings("unchecked")
     public T save(T object) {
+        Session sess = getSession();
+        return (T) sess.merge(object);
+    }
 
-        if (object instanceof ObjectWithID) {
-
-            Number id = ((ObjectWithID) object).getId();
-
-            // TODO due to a bug hibernate @PrePersist and other EventListeners do not work - this is a workaround
-            for (Method m : this.persistentClass.getMethods()) {
-
-                // in case there is a new object to persist / to be inserted
-                if (id == null && m.isAnnotationPresent(PrePersist.class)) {
-                    try {
-                        m.invoke(object);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                // in case the object is to be updated
-                if (id != null && m.isAnnotationPresent(PreUpdate.class)) {
-                    try {
-                        m.invoke(object);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-
-        return (T) super.getHibernateTemplate().merge(object);
+    /**
+     *
+     * {@inheritDoc}
+     */
+    @Override
+    public void remove(T object) {
+        Session sess = getSession();
+        sess.delete(object);
     }
 
     /**
      * {@inheritDoc}
      */
     public void remove(PK id) {
-        super.getHibernateTemplate().delete(this.get(id));
+        Session sess = getSession();
+        IdentifierLoadAccess byId = sess.byId(persistentClass);
+        T entity = (T) byId.load(id);
+        sess.delete(entity);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<T> search(String searchTerm) throws SearchException {
+        Session sess = getSession();
+        FullTextSession txtSession = Search.getFullTextSession(sess);
+
+        org.apache.lucene.search.Query qry;
+        try {
+            qry = HibernateSearchTools.generateQuery(searchTerm, this.persistentClass, sess, defaultAnalyzer);
+        } catch (ParseException ex) {
+            throw new SearchException(ex);
+        }
+        org.hibernate.search.FullTextQuery hibQuery = txtSession.createFullTextQuery(qry,
+                this.persistentClass);
+        return hibQuery.list();
     }
 
     /**
@@ -136,15 +154,53 @@ public class GenericDaoHibernate<T, PK extends Serializable> extends HibernateDa
      */
     @SuppressWarnings("unchecked")
     public List<T> findByNamedQuery(String queryName, Map<String, Object> queryParams) {
-        String[] params = new String[queryParams.size()];
-        Object[] values = new Object[queryParams.size()];
-        int index = 0;
-        Iterator<String> i = queryParams.keySet().iterator();
-        while (i.hasNext()) {
-            String key = i.next();
-            params[index] = key;
-            values[index++] = queryParams.get(key);
+        Session sess = getSession();
+
+        Query namedQuery = sess.getNamedQuery(queryName);
+        for (Map.Entry<String, Object> entry : queryParams.entrySet()) {
+            Object val = entry.getValue();
+            String key = entry.getKey();
+            if (val instanceof Collection) {
+                namedQuery.setParameterList(key, (Collection) val);
+            } else if (val instanceof Object[]) {
+                namedQuery.setParameterList(key, (Object[]) val);
+            } else {
+                namedQuery.setParameter(key, val);
+            }
         }
-        return getHibernateTemplate().findByNamedQueryAndNamedParam(queryName, params, values);
+        return namedQuery.list();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void reindex() {
+        HibernateSearchTools.reindex(persistentClass, getSessionFactory().getCurrentSession());
+    }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void reindexAll(boolean async) {
+        HibernateSearchTools.reindexAll(async, getSessionFactory().getCurrentSession());
+    }
+
+    private Session getSession() throws HibernateException {
+        Session sess = getSessionFactory().getCurrentSession();
+        if (sess == null) {
+            sess = getSessionFactory().openSession();
+        }
+        return sess;
+    }
+
+    public SessionFactory getSessionFactory() {
+        return sessionFactory;
+    }
+
+    public void setSessionFactory(SessionFactory sessionFactory) {
+        this.sessionFactory = sessionFactory;
     }
 }

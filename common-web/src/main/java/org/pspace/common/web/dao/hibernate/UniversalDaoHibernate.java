@@ -1,24 +1,24 @@
 package org.pspace.common.web.dao.hibernate;
 
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.queryParser.ParseException;
+import org.apache.lucene.util.Version;
+import org.hibernate.*;
+import org.hibernate.search.FullTextSession;
+import org.hibernate.search.Search;
+import org.hibernate.search.SearchException;
 import org.pspace.common.web.dao.UniversalDao;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hibernate.HibernateException;
-import org.hibernate.Query;
-import org.hibernate.Session;
 import org.hibernate.metadata.ClassMetadata;
 import org.hibernate.persister.entity.AbstractEntityPersister;
 import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.orm.ObjectRetrievalFailureException;
-import org.springframework.orm.hibernate3.HibernateCallback;
-import org.springframework.orm.hibernate3.HibernateTemplate;
-import org.springframework.orm.hibernate3.support.HibernateDaoSupport;
 
+import javax.annotation.Resource;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * This class serves as the a class that can CRUD any object witout any
@@ -27,27 +27,33 @@ import java.util.Map;
  *
  * @author Bryan Noll
  */
-public class UniversalDaoHibernate extends HibernateDaoSupport implements UniversalDao {
+public class UniversalDaoHibernate implements UniversalDao {
 
     /**
      * Log variable for all child classes. Uses LogFactory.getLog(getClass()) from Commons Logging
      */
     protected final Log log = LogFactory.getLog(getClass());
+    private final Analyzer defaultAnalyzer = new StandardAnalyzer(Version.LUCENE_36);
+
+    @Resource
+    private SessionFactory sessionFactory;
 
     /**
      * {@inheritDoc}
      */
     public <T> T save(T o) {
-        return getHibernateTemplate().merge(o);
+        Session sess = getSession();
+        return (T) sess.merge(o);
     }
 
     /**
      * {@inheritDoc}
      */
     public <T> List<T> saveAll(List<T> objects) {
+        Session sess = getSession();
         ArrayList<T> ret = new ArrayList<T>(objects.size());
         for (T object : objects) {
-            ret.add(getHibernateTemplate().merge(object));
+            ret.add((T) sess.merge(object));
         }
         return ret;
     }
@@ -82,29 +88,34 @@ public class UniversalDaoHibernate extends HibernateDaoSupport implements Univer
     /**
      * {@inheritDoc}
      */
-    public <T> T get(Class<T> clazz, Serializable id) {
-        T o = getHibernateTemplate().get(clazz, id);
+    public <T> T get(Class<T> persistentClass, Serializable id) {
 
-        if (o == null) {
-            throw new ObjectRetrievalFailureException(clazz, id);
+        Session sess = getSession();
+        IdentifierLoadAccess byId = sess.byId(persistentClass);
+        T entity = (T) byId.load(id);
+
+        if (entity == null) {
+            throw new ObjectRetrievalFailureException(persistentClass, id);
         }
 
-        return o;
+        return entity;
     }
 
     /**
      * {@inheritDoc}
      */
     @SuppressWarnings("unchecked")
-    public boolean exists(Class clazz, Serializable id) {
-        return getHibernateTemplate().get(clazz, id) != null;
+    public boolean exists(Class persistentClass, Serializable id) {
+        Session sess = getSession();
+        IdentifierLoadAccess byId = sess.byId(persistentClass);
+        return byId.load(id) != null;
     }
 
     /**
      * {@inheritDoc}
      */
     public <T> List<T> getAll(Class<T> clazz) {
-        return getHibernateTemplate().loadAll(clazz);
+        return getSession().createCriteria(clazz).list();
     }
 
     /**
@@ -112,20 +123,40 @@ public class UniversalDaoHibernate extends HibernateDaoSupport implements Univer
      */
     @SuppressWarnings("unchecked")
     public void remove(Class clazz, Serializable id) {
-        getHibernateTemplate().delete(get(clazz, id));
+        Session sess = getSession();
+        IdentifierLoadAccess byId = sess.byId(clazz);
+        sess.delete(byId.load(id));
+    }
+
+    /**
+     *
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> void remove(T object) {
+        Session sess = getSession();
+        sess.delete(object);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> List<T> findByNamedQuery(Class<T> clazz, String queryName, Map<String, Object> queryParams) {
-        String[] params = new String[queryParams.size()];
-        Object[] values = new Object[queryParams.size()];
-        int index = 0;
-        for (String s : queryParams.keySet()) {
-            params[index] = s;
-            values[index++] = queryParams.get(s);
+        Session sess = getSession();
+
+        Query namedQuery = sess.getNamedQuery(queryName);
+
+        for (Map.Entry<String, Object> entry : queryParams.entrySet()) {
+            Object val = entry.getValue();
+            String key = entry.getKey();
+            if (val instanceof Collection) {
+                namedQuery.setParameterList(key, (Collection) val);
+            } else if (val instanceof Object[]) {
+                namedQuery.setParameterList(key, (Object[]) val);
+            } else {
+                namedQuery.setParameter(key, val);
+            }
         }
-        return getHibernateTemplate().findByNamedQueryAndNamedParam(queryName, params, values);
+        return namedQuery.list();
     }
 
     @Override
@@ -139,45 +170,102 @@ public class UniversalDaoHibernate extends HibernateDaoSupport implements Univer
             values[index++] = queryParams.get(s);
         }
 
-        HibernateTemplate hibernateTemplate = getHibernateTemplate();
 
-        return hibernateTemplate.execute(new HibernateCallback<List>() {
-            public List doInHibernate(Session session) throws HibernateException {
-                Query queryObject = session.getNamedQuery(queryName);
-                queryObject.setFirstResult((pageNumber - 1) * pageSize);
-                queryObject.setMaxResults(pageSize);
-                for (int i = 0; i < values.length; i++) {
-                    if (values[i] instanceof Collection) {
-                        queryObject.setParameterList(params[i], (Collection) values[i]);
-                    } else if (values[i] instanceof Object[]) {
-                        queryObject.setParameterList(params[i], (Object[]) values[i]);
-                    } else {
-                        queryObject.setParameter(params[i], values[i]);
-                    }
-                }
-                return queryObject.list();
+        Query queryObject = getSession().getNamedQuery(queryName);
+        queryObject.setFirstResult((pageNumber - 1) * pageSize);
+        queryObject.setMaxResults(pageSize);
+        for (int i = 0; i < values.length; i++) {
+            if (values[i] instanceof Collection) {
+                queryObject.setParameterList(params[i], (Collection) values[i]);
+            } else if (values[i] instanceof Object[]) {
+                queryObject.setParameterList(params[i], (Object[]) values[i]);
+            } else {
+                queryObject.setParameter(params[i], values[i]);
             }
-        });
+        }
+        return queryObject.list();
 
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> T findUniqueByNamedQuery(Class<T> clazz, String queryName, Map<String, Object> queryParams) throws DataRetrievalFailureException {
-        String[] params = new String[queryParams.size()];
-        Object[] values = new Object[queryParams.size()];
-        int index = 0;
-        for (String s : queryParams.keySet()) {
-            params[index] = s;
-            values[index++] = queryParams.get(s);
+
+        Session sess = getSession();
+
+        Query namedQuery = sess.getNamedQuery(queryName);
+        for (Map.Entry<String, Object> entry : queryParams.entrySet()) {
+            Object val = entry.getValue();
+            String key = entry.getKey();
+            if (val instanceof Collection) {
+                namedQuery.setParameterList(key, (Collection) val);
+            } else if (val instanceof Object[]) {
+                namedQuery.setParameterList(key, (Object[]) val);
+            } else {
+                namedQuery.setParameter(key, val);
+            }
         }
-        List<T> x = getHibernateTemplate().findByNamedQueryAndNamedParam(queryName, params, values);
-        if (x.isEmpty()) {
+
+        Iterator iterator = namedQuery.iterate();
+
+        if (!iterator.hasNext()) {
             throw new DataRetrievalFailureException("Query returned no result.");
         }
-        if (x.size() > 1) {
+        T ret = (T) iterator.next();
+        if (iterator.hasNext()) {
             throw new DataRetrievalFailureException("Query returned more than one object.");
         }
-        return x.get(0);
+        return ret;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <T> List<T> search(Class<T> clazz, String searchTerm) throws SearchException {
+        Session sess = getSession();
+        FullTextSession txtSession = Search.getFullTextSession(sess);
+
+        org.apache.lucene.search.Query qry;
+        try {
+            qry = HibernateSearchTools.generateQuery(searchTerm, clazz, sess, defaultAnalyzer);
+        } catch (ParseException ex) {
+            throw new SearchException(ex);
+        }
+        org.hibernate.search.FullTextQuery hibQuery = txtSession.createFullTextQuery(qry, clazz);
+        return hibQuery.list();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void reindex(Class persistentClass) {
+        HibernateSearchTools.reindex(persistentClass, getSessionFactory().getCurrentSession());
+    }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void reindexAll(boolean async) {
+        HibernateSearchTools.reindexAll(async, getSessionFactory().getCurrentSession());
+    }
+
+    private Session getSession() throws HibernateException {
+        Session sess = getSessionFactory().getCurrentSession();
+        if (sess == null) {
+            sess = getSessionFactory().openSession();
+        }
+        return sess;
+    }
+
+    public SessionFactory getSessionFactory() {
+        return sessionFactory;
+    }
+
+    public void setSessionFactory(SessionFactory sessionFactory) {
+        this.sessionFactory = sessionFactory;
     }
 }

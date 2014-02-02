@@ -1,5 +1,7 @@
 package org.pspace.common.web.dao;
 
+import org.hibernate.search.SearchException;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -69,10 +71,17 @@ public interface UniversalDao {
      */
     void remove(Class clazz, Serializable id);
 
+    <T> void remove(T object);
+
     <T> List<T> findByNamedQuery(Class<T> clazz, String s, Map<String, Object> objectMap);
 
     <T> T findUniqueByNamedQuery(Class<T> clazz, String s, Map<String, Object> objectMap);
 
     <T> List<T> findByNamedQueryPaginated(Class<T> clazz, final String queryName, Map<String, Object> queryParams, final int pageNumber, final int pageSize);
 
+    <T> List<T> search(Class<T> clazz, String searchTerm) throws SearchException;
+
+    void reindex(Class persistentClass);
+
+    void reindexAll(boolean async);
 }

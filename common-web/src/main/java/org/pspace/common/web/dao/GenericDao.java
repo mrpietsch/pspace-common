@@ -1,5 +1,7 @@
 package org.pspace.common.web.dao;
 
+import org.hibernate.search.SearchException;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +52,8 @@ public interface GenericDao<T, PK extends Serializable> {
      */
     T save(T object);
 
+    void remove(T object);
+
     /**
      * Generic method to delete an object based on class and id
      *
@@ -66,6 +70,8 @@ public interface GenericDao<T, PK extends Serializable> {
      */
     List<T> getAllDistinct();
 
+    List<T> search(String searchTerm) throws SearchException;
+
     /**
      * Find a list of records by using a named query
      *
@@ -74,4 +80,8 @@ public interface GenericDao<T, PK extends Serializable> {
      * @return a list of the records found
      */
     List<T> findByNamedQuery(String queryName, Map<String, Object> queryParams);
+
+    void reindex();
+
+    void reindexAll(boolean async);
 }

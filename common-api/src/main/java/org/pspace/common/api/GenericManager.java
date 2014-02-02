@@ -55,10 +55,16 @@ public interface GenericManager<T, PK extends Serializable> extends Converter<St
 
     List<T> saveAll(List<T> object);
 
+    List<T> search(String query);
+
     /**
      * Generic method to delete an object based on class and id
      *
      * @param id the identifier (primary key) of the object to remove
      */
     void remove(PK id);
+
+    void reindex();
+
+    void reindexAll(boolean async);
 }

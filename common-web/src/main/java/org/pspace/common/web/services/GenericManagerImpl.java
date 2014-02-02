@@ -48,6 +48,7 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
     /**
      * {@inheritDoc}
      */
+    @Override
     public List<T> getAll() {
         return dao.getAll(objectClass);
     }
@@ -60,6 +61,7 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
     /**
      * {@inheritDoc}
      */
+    @Override
     public T get(PK id) {
         return dao.get(objectClass, id);
     }
@@ -67,6 +69,7 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean exists(PK id) {
         return dao.exists(objectClass, id);
     }
@@ -74,6 +77,7 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
     /**
      * {@inheritDoc}
      */
+    @Override
     public T save(T object) {
         T newObject = dao.save(object);
         if (log.isDebugEnabled()) log.debug("Saved object of type " + newObject.getClass() + " with id " + newObject.getId());
@@ -83,13 +87,20 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
     /**
      * {@inheritDoc}
      */
+    @Override
     public List<T> saveAll(List<T> object) {
         return dao.saveAll(object);
+    }
+
+    @Override
+    public List<T> search(String query) {
+        return dao.search(objectClass, query);
     }
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public void remove(PK id) {
         if (log.isDebugEnabled()) log.debug("Deleting object of type " + objectClass + " with id " + id);
         dao.remove(objectClass, id);
@@ -111,5 +122,20 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
             Serializable l = Long.parseLong(source);
             return dao.get(objectClass, l);
         }
+    }
+
+
+    @Override
+    public void reindex() {
+        dao.reindex(objectClass);
+    }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void reindexAll(boolean async) {
+        dao.reindexAll(async);
     }
 }
