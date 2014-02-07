@@ -1,5 +1,6 @@
 package org.pspace.common.web.dao.jackrabbit;
 
+import org.apache.jackrabbit.commons.JcrUtils;
 import org.pspace.common.api.FileInfo;
 import org.pspace.common.api.ImageFileInfo;
 import org.pspace.common.api.ObjectWithAttachments;
@@ -23,7 +24,6 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 
@@ -67,7 +67,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
             // process directory
             final Node newParentNode;
             if (!isRoot) {
-                newParentNode = getOrCreateFolder(true, parentNode, f.getName());
+                newParentNode = JcrUtils.getOrAddFolder(parentNode, f.getName());
             } else {
                 newParentNode = parentNode;
             }
@@ -149,27 +149,18 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
     private Node getFolderForObject(ObjectWithID objectWithID, boolean createIfNotExists) throws RepositoryException {
         Node rootNode = jcrTemplate.getRootNode();
 
-        String entityFolderName = objectWithID.getClass().getSimpleName().toLowerCase();
-        final Node entityFolder = getOrCreateFolder(createIfNotExists, rootNode, entityFolderName);
+        final String entityFolderName = objectWithID.getClass().getSimpleName().toLowerCase();
+        final Node entityFolder = createIfNotExists ?
+                JcrUtils.getOrAddFolder(rootNode, entityFolderName) :
+                JcrUtils.getNodeIfExists(rootNode, entityFolderName);
 
         if (entityFolder == null) return null;
 
-        String objectFolderName = objectWithID.getId().toString();
+        final String objectFolderName = objectWithID.getId().toString();
 
-        return getOrCreateFolder(createIfNotExists, entityFolder, objectFolderName);
-    }
-
-    private Node getOrCreateFolder(boolean createIfNotExists, Node node, String folderName) throws RepositoryException {
-        if (node.hasNode(folderName)) {
-            return node.getNode(folderName);
-        } else {
-            if (createIfNotExists) {
-                log.debug("Creating new folder " + folderName + " below node " + node.getPath());
-                return node.addNode(folderName, "nt:folder");
-            } else {
-                return null;
-            }
-        }
+        return createIfNotExists ?
+                JcrUtils.getOrAddFolder(entityFolder, objectFolderName) :
+                JcrUtils.getNodeIfExists(entityFolder, objectFolderName);
     }
 
     private void saveInputStream(Node parentFolder, InputStream inputStream, String fileName) throws RepositoryException {
@@ -179,17 +170,8 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
     private void saveInputStream(Node parentFolder, InputStream inputStream, String fileName, String mimeType) throws RepositoryException {
         assert parentFolder != null;
-
-        Node file = parentFolder.addNode(fileName, "nt:file");
-        file.addMixin("mix:lockable");
-
-        Node resource = file.addNode("jcr:content", "nt:resource");
-        resource.setProperty("jcr:data", jcrTemplate.getValueFactory().createBinary(inputStream));
-        if (mimeType != null) resource.setProperty("jcr:mimeType", mimeType, PropertyType.STRING);
-        resource.setProperty("jcr:lastModified", Calendar.getInstance());
-
+        Node file = JcrUtils.putFile(parentFolder, fileName, mimeType, inputStream);
         log.info("Saving file {}", file.getPath());
-
         jcrTemplate.save();
     }
 
@@ -220,6 +202,8 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
             NodeIterator nodeIt = folder.getNodes();
             List<ImageFileInfo> imageFileNames = new ArrayList<ImageFileInfo>();
             List<FileInfo> regularFileNames = new ArrayList<FileInfo>();
+
+
             while (nodeIt.hasNext()) {
                 Node fileNode = nodeIt.nextNode();
 
@@ -242,24 +226,15 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                             final Node thumbFile;
 
                             if (folder.hasNode(thumbName)) {
-                                thumbFile = folder.getNode(thumbName);
+                                thumbFile = JcrUtils.getNodeIfExists(folder, thumbName);
                             } else {
-
-                                thumbFile = folder.addNode(thumbName, "nt:file");
-                                thumbFile.addMixin("mix:lockable");
-
-                                Property contentProperty = resourceNode.getProperty("jcr:data");
-                                Binary binary = contentProperty.getBinary();
-
                                 // resize the image
-                                Binary thumbImage = resizeImage(binary, mimeType);
+                                InputStream inputStream = JcrUtils.readFile(fileNode);
+                                Binary thumbImage = resizeImage(inputStream);
 
-                                Node resource = thumbFile.addNode("jcr:content", "nt:resource");
-                                resource.setProperty("jcr:data", thumbImage);
-                                resource.setProperty("jcr:mimeType", mimeType, PropertyType.STRING);
-                                resource.setProperty("jcr:lastModified", Calendar.getInstance());
+                                thumbFile = JcrUtils.putFile(folder, thumbName, mimeType, thumbImage.getStream());
 
-                                log.info("Saving thumbnail {}" + thumbFile.getPath());
+                                log.info("Saving thumbnail {}", thumbFile.getPath());
 
                                 changes = true;
 
@@ -301,9 +276,8 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
     }
 
-    private Binary resizeImage(Binary binary, String mimeType) throws RepositoryException, IOException {
+    private Binary resizeImage(InputStream imageInputStream) throws RepositoryException, IOException {
 
-        InputStream imageInputStream = binary.getStream();
         BufferedImage originalImage = ImageIO.read(imageInputStream);
         int type = originalImage.getType() == 0 ? BufferedImage.TYPE_INT_ARGB : originalImage.getType();
 
