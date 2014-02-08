@@ -19,6 +19,8 @@ import org.hibernate.search.MassIndexer;
 import org.hibernate.search.Search;
 import org.hibernate.search.SearchFactory;
 import org.hibernate.search.indexes.IndexReaderAccessor;
+import org.hibernate.search.query.dsl.QueryBuilder;
+import org.hibernate.search.query.dsl.TermMatchingContext;
 
 /**
  * Utility class to generate lucene queries for hibernate search and perform full reindexing.
@@ -50,39 +52,32 @@ class HibernateSearchTools {
             IndexReaderAccessor readerAccessor = null;
             IndexReader reader = null;
             try {
-                FullTextSession txtSession = Search.getFullTextSession(sess);
-
-                // obtain analyzer to parse the query:
-                Analyzer analyzer;
-                if (searchedEntity == null) {
-                    analyzer = defaultAnalyzer;
-                } else {
-                    analyzer = txtSession.getSearchFactory().getAnalyzer(searchedEntity);
-                }
+                FullTextSession fullTextSession = Search.getFullTextSession(sess);
 
                 // search on all indexed fields: generate field list, removing internal hibernate search field name: _hibernate_class
                 // TODO: possible improvement: cache the fields of each entity
-                SearchFactory searchFactory = txtSession.getSearchFactory();
+                SearchFactory searchFactory = fullTextSession.getSearchFactory();
                 readerAccessor = searchFactory.getIndexReaderAccessor();
                 reader = readerAccessor.open(searchedEntity);
                 FieldInfos fieldInfos = ReaderUtil.getMergedFieldInfos(reader);
                 int size = fieldInfos.size();
-                Collection<String> fieldNames = new ArrayList<String>();
+                ArrayList<String> fieldNames = new ArrayList<String>();
                 for ( int i=0; i<size; i++ ) {
                     if (fieldInfos.fieldInfo(i).isIndexed)
                     fieldNames.add(fieldInfos.fieldName(i));
                 }
                 fieldNames.remove("_hibernate_class");
-                String[] fnames = new String[0];
-                fnames = fieldNames.toArray(fnames);
 
-                // To search on all fields, search the term in all fields
-                String[] queries = new String[fnames.length];
-                for (int i = 0; i < queries.length; ++i) {
-                    queries[i] = searchTerm;
+                QueryBuilder queryBuilder = fullTextSession.getSearchFactory().buildQueryBuilder().forEntity(searchedEntity).get();
+
+                TermMatchingContext termMatchingContext = queryBuilder.keyword().wildcard().onField(fieldNames.get(0));
+                for (int i = 1; i < fieldNames.size(); ++i) {
+                    termMatchingContext = termMatchingContext.andField(fieldNames.get(i));
                 }
 
-                qry = MultiFieldQueryParser.parse(Version.LUCENE_36, queries, fnames, analyzer);
+                qry = termMatchingContext.matching(searchTerm + "*").createQuery();
+
+                // qry = MultiFieldQueryParser.parse(Version.LUCENE_36, queries, fnames, analyzer);
             } finally {
                 if (readerAccessor != null && reader != null) {
                     readerAccessor.close(reader);
