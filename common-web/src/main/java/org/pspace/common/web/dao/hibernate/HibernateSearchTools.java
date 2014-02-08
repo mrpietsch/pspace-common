@@ -11,6 +11,7 @@ import org.apache.lucene.queryParser.MultiFieldQueryParser;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.util.ReaderUtil;
 import org.apache.lucene.util.Version;
 import org.hibernate.Session;
 import org.hibernate.search.FullTextSession;
@@ -64,7 +65,7 @@ class HibernateSearchTools {
                 SearchFactory searchFactory = txtSession.getSearchFactory();
                 readerAccessor = searchFactory.getIndexReaderAccessor();
                 reader = readerAccessor.open(searchedEntity);
-                FieldInfos fieldInfos = reader.getFieldInfos();
+                FieldInfos fieldInfos = ReaderUtil.getMergedFieldInfos(reader);
                 int size = fieldInfos.size();
                 Collection<String> fieldNames = new ArrayList<String>();
                 for ( int i=0; i<size; i++ ) {
