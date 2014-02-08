@@ -5,10 +5,12 @@ import java.util.Collection;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.queryParser.MultiFieldQueryParser;
 import org.apache.lucene.queryParser.ParseException;
+import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.util.ReaderUtil;
@@ -37,11 +39,10 @@ class HibernateSearchTools {
      * @param searchTerm the term to search for
      * @param searchedEntity the class searched
      * @param sess the hibernate session
-     * @param defaultAnalyzer the default analyzer for parsing the search terms
-     * @return
+     * @return query
      * @throws ParseException
      */
-    public static Query generateQuery(String searchTerm, Class searchedEntity, Session sess, Analyzer defaultAnalyzer) throws ParseException {
+    public static Query generateQuery(String searchTerm, Class searchedEntity, Session sess, Analyzer analyzer) throws ParseException {
         Query qry = null;
 
         if (searchTerm.equals("*")) {
@@ -75,9 +76,20 @@ class HibernateSearchTools {
                     termMatchingContext = termMatchingContext.andField(fieldNames.get(i));
                 }
 
-                qry = termMatchingContext.matching(searchTerm + "*").createQuery();
+                // TODO: use proper analyzer per field
+                qry = termMatchingContext.matching(searchTerm.toLowerCase() + "*").createQuery();
 
-                // qry = MultiFieldQueryParser.parse(Version.LUCENE_36, queries, fnames, analyzer);
+//                String[] fnames = new String[0];
+//                fnames = fieldNames.toArray(fnames);
+//
+//                // To search on all fields, search the term in all fields
+//                String[] queries = new String[fnames.length];
+//                for (int i = 0; i < queries.length; ++i) {
+//                    queries[i] = searchTerm;
+//                }
+//
+//                qry = MultiFieldQueryParser.parse(Version.LUCENE_36, queries, fnames, analyzer);
+
             } finally {
                 if (readerAccessor != null && reader != null) {
                     readerAccessor.close(reader);
