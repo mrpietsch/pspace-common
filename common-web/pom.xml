@@ -114,13 +114,18 @@
         </dependency>
 
         <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
         </dependency>
 
         <dependency>
             <groupId>net.sf.textile4j</groupId>
             <artifactId>textile4j</artifactId>
+            <scope>compile</scope>
         </dependency>
 
         <dependency>
