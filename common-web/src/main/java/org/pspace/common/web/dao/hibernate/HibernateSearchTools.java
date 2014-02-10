@@ -1,20 +1,14 @@
 package org.pspace.common.web.dao.hibernate;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.queryParser.MultiFieldQueryParser;
 import org.apache.lucene.queryParser.ParseException;
-import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.util.ReaderUtil;
-import org.apache.lucene.util.Version;
 import org.hibernate.Session;
 import org.hibernate.search.FullTextSession;
 import org.hibernate.search.MassIndexer;
@@ -24,14 +18,16 @@ import org.hibernate.search.indexes.IndexReaderAccessor;
 import org.hibernate.search.query.dsl.QueryBuilder;
 import org.hibernate.search.query.dsl.TermMatchingContext;
 
+import java.util.ArrayList;
+
 /**
  * Utility class to generate lucene queries for hibernate search and perform full reindexing.
  *
  * @author jgarcia
  */
 class HibernateSearchTools {
-    protected static final Log log = LogFactory.getLog(HibernateSearchTools.class);
 
+    protected static final Log log = LogFactory.getLog(HibernateSearchTools.class);
 
     /**
      * Generates a lucene query to search for a given term in all the indexed fields of a class
