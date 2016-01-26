@@ -115,7 +115,13 @@ public class UniversalDaoHibernate implements UniversalDao {
      * {@inheritDoc}
      */
     public <T> List<T> getAll(Class<T> clazz) {
-        return getSession().createCriteria(clazz).list();
+        return getSession()
+                .createCriteria(clazz)
+                // Hibernate Criteria returns children multiple times with FetchType.EAGER:pervent
+                // This will work for most cases....except for when you try to use Criteria
+                // to Fetch 2 collections/associations.
+                .setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY)
+                .list();
     }
 
     /**
