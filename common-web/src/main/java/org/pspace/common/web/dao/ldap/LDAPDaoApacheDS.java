@@ -83,7 +83,7 @@ public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBea
 
             PartitionFactory partitionFactory = factory.getPartitionFactory();
 
-            Partition partition = partitionFactory.createPartition(directoryService.getSchemaManager(), rootDc, rootDn, CACHE_SIZE, getTempDir());
+            Partition partition = partitionFactory.createPartition(directoryService.getSchemaManager(), directoryService.getDnFactory(), rootDc, rootDn, CACHE_SIZE, getTempDir());
 
 //
 //            Partition partition = new JdbmPartition(directoryService.getSchemaManager());

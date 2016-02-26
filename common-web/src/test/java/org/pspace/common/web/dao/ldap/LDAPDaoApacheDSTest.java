@@ -1,5 +1,6 @@
 package org.pspace.common.web.dao.ldap;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.pspace.common.api.Person;
 
@@ -144,6 +145,7 @@ public class LDAPDaoApacheDSTest {
         }
     };
 
+    @Ignore
     @Test
     public void testSetupService() throws Exception {
 
