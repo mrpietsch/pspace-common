@@ -21,16 +21,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.StringUtils;
-import sun.misc.BASE64Encoder;
 
 import java.io.File;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created at 08.12.11 - 07:30
@@ -235,9 +231,9 @@ public class LDAPDaoApacheDS implements LDAPDao, InitializingBean, DisposableBea
         try {
             MessageDigest md = MessageDigest.getInstance(PW_ENCODING_ALGORITHM);
             md.update(password.getBytes());
-            byte[] bytes = md.digest();
-            BASE64Encoder base64encoder = new BASE64Encoder();
-            return String.format("{%s}%s", PW_ENCODING_ALGORITHM, base64encoder.encode(bytes));
+            byte[] digest = md.digest();
+            byte[] encodedDigest = Base64.getEncoder().encode(digest);
+            return String.format("{%s}%s", PW_ENCODING_ALGORITHM, new String(encodedDigest));
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
