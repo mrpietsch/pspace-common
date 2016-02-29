@@ -339,4 +339,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
     }
 
+    public void setRepository(Repository repository) {
+        this.repository = repository;
+    }
 }
