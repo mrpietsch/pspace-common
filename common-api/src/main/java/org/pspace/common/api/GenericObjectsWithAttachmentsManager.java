@@ -7,7 +7,7 @@ import java.util.List;
  */
 public interface GenericObjectsWithAttachmentsManager<T extends ObjectWithAttachments<PK>, PK extends Number> extends GenericManager<T, PK> {
 
-    List<T> getAllIncludingAttachmentAndImage();
+    List<T> getAllIncludingAttachmentAndImage() throws Exception;
 
-    T getIncludingAttachmentAndImage(PK id);
+    T getIncludingAttachmentAndImage(PK id) throws Exception;
 }

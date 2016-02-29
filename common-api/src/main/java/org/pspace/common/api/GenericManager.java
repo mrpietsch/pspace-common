@@ -62,7 +62,7 @@ public interface GenericManager<T, PK extends Serializable> extends Converter<St
      *
      * @param id the identifier (primary key) of the object to remove
      */
-    void remove(PK id);
+    void remove(PK id) throws Exception;
 
     void reindex();
 

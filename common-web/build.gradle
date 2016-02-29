@@ -1,30 +1,29 @@
 description = 'common-web'
+
+configurations {
+    // spring-modules-jcr dependencies which cannot be found
+//    compile.exclude(group: 'jeceira', module: 'jeceira')
+//    compile.exclude(group: 'jsr170',module: 'jsr170')
+//    compile.exclude(group: 'aparzev')
+//    compile.exclude(group: 'jug', module: 'jug-asl')
+    compile.exclude(group: 'jsr170', module: 'jcr')
+    compile.exclude(module: 'jackrabbit-jca')
+}
+
 dependencies {
     compile project(':common-api')
 
     compile("org.springframework.boot:spring-boot-starter-web:1.3.3.RELEASE")
     compile("org.springframework.boot:spring-boot-starter-logging:1.3.3.RELEASE")
-
+    compile("org.springframework.boot:spring-boot-starter-security:1.3.3.RELEASE")
+    compile("org.springframework.boot:spring-boot-starter-test:1.3.3.RELEASE")
+    compile("org.springframework.security:spring-security-taglibs:4.0.3.RELEASE")
 //    compile("org.springframework.boot:spring-boot-starter-slf4j:1.3.3.RELEASE")
-
 
     compile group: 'org.springframework', name: 'spring-orm', version: '4.2.5.RELEASE'
     compile group: 'javax.jcr', name: 'jcr', version: '2.0'
-    compile(group: 'org.springmodules', name: 'spring-modules-jcr', version: '0.8') {
-        exclude(module: 'spring')
-        exclude(module: 'jsr170')
-        exclude(module: 'servlet-api')
-        exclude(module: 'jackrabbit-jca')
-        exclude(module: 'jackrabbit-jcr-rmi')
-        exclude(module: 'jeceira')
-        exclude(module: 'doka')
-        exclude(module: 'commons')
-        exclude(module: 'jug-asl')
-        exclude(module: 'geronimo-spec-jta')
-        exclude(module: 'geronimo-spec-j2ee-connector')
-        exclude(module: 'log4j')
-    }
-    compile group: 'org.hibernate', name: 'hibernate-core', version: '4.3.1.Final'
+//
+// compile group: 'org.hibernate', name: 'hibernate-core', version: '4.3.1.Final'
     compile group: 'org.hibernate', name: 'hibernate-search-orm', version: '4.5.0.Final'
     compile group: 'org.hibernate', name: 'hibernate-search-analyzers', version: '4.5.0.Final'
     compile group: 'org.apache.lucene', name: 'lucene-core', version: '3.6.2'
@@ -33,16 +32,10 @@ dependencies {
     compile group: 'commons-logging', name: 'commons-logging', version: '1.1.1'
     compile group: 'commons-lang', name: 'commons-lang', version: '2.6'
     compile group: 'commons-beanutils', name: 'commons-beanutils', version: '1.8.3'
-//    compile group: 'org.springframework', name: 'spring-beans', version: '4.0.1.RELEASE'
-//    compile group: 'org.springframework', name: 'spring-tx', version: '4.0.1.RELEASE'
-//    compile group: 'org.springframework', name: 'spring-core', version: '4.0.1.RELEASE'
-//    compile group: 'org.springframework', name: 'spring-context', version: '4.0.1.RELEASE'
-//    compile group: 'org.springframework', name: 'spring-web', version: '4.0.1.RELEASE'
-    compile group: 'org.springframework.security', name: 'spring-security-taglibs', version: '3.2.0.RELEASE'
 //    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.6.1'
     compile group: 'net.sf.textile4j', name: 'textile4j', version: '1.2'
-    compile group: 'org.apache.jackrabbit', name: 'jackrabbit-jcr-server', version: '2.6.5'
-    compile group: 'org.apache.jackrabbit', name: 'jackrabbit-jcr-commons', version: '2.6.5'
+    compile group: 'org.apache.jackrabbit', name: 'jackrabbit-jcr-server', version: '2.12.0'
+    compile group: 'org.apache.jackrabbit', name: 'jackrabbit-jcr-commons', version: '2.12.0'
     compile group: 'javax.validation', name: 'validation-api', version: '1.0.0.GA'
     compile group: 'org.iban4j', name: 'iban4j', version: '1.0.0'
     compile(group: 'org.apache.directory.server', name: 'apacheds-all', version: '2.0.0-M21') {

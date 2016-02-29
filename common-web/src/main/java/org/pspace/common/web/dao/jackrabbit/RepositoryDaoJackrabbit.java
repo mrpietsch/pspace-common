@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import org.springmodules.jcr.JcrTemplate;
 
 import javax.imageio.ImageIO;
 import javax.jcr.*;
@@ -50,19 +49,30 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
     }
 
     @Autowired
-    private JcrTemplate jcrTemplate;
+    private Repository repository;
 
 //    private final static String ATTACHMENT_FOLDER = "attachments";
 //    private final static String GALLERY_FOLDER = "gallery";
 
     @Override
     @Transactional
-    public void importDirectory(String fileName) throws IOException, RepositoryException {
-        traverse(new File(fileName), jcrTemplate.getRootNode(), true);
-
+    public void importDirectory(Session session, final String fileName) throws Exception {
+        traverse(session, new File(fileName), session.getRootNode(), true);
     }
 
-    private void traverse(final File f, Node parentNode, boolean isRoot) throws IOException, RepositoryException {
+    @Override
+    public <T> T doInSession(SessionAwareCallable<T> callable) throws Exception {
+        Session session = null;
+        try {
+            session = repository.login(new SimpleCredentials("username", "password".toCharArray()));
+            return callable.call(session);
+        } finally {
+            if (session != null) session.logout();
+        }
+    }
+
+
+    private void traverse(Session session, final File f, Node parentNode, boolean isRoot) throws IOException, RepositoryException {
         if (f.isDirectory()) {
             // process directory
             final Node newParentNode;
@@ -76,7 +86,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                 for (File child : childs) {
                     // descend in recursion
                     if (!child.getName().matches(IGNORES_FILES_REGEX)) {
-                        traverse(child, newParentNode, false);
+                        traverse(session, child, newParentNode, false);
                     }
                 }
             }
@@ -87,7 +97,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                 is = new BufferedInputStream(new FileInputStream(f));
                 String name = f.getName();
                 log.info(String.format("Saving file %s in folder %s", f.getPath(), parentNode.getPath()));
-                saveInputStream(parentNode, is, name);
+                saveInputStream(session, parentNode, is, name);
             } finally {
                 if (is != null) is.close();
             }
@@ -95,8 +105,8 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
     }
 
     @Override
-    public List<SearchResult> search(String q) throws RepositoryException {
-        String stmt;
+    public List<SearchResult> search(Session session, String q) throws Exception {
+        final String stmt;
         // String queryTerms = "";
         if (q.startsWith("related:")) {
             String path = q.substring("related:".length());
@@ -108,36 +118,29 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
             q = q.replaceAll("'", "''");
             stmt = "//element(*, nt:file)[jcr:contains(jcr:content, '" + q + "')]/rep:excerpt(.) order by @jcr:score descending";
         }
-        Session session = null;
-        try {
-            session = jcrTemplate.getSessionFactory().getSession();
-            Query query = session.getWorkspace().getQueryManager().createQuery(stmt, Query.XPATH);
-            //long time = System.currentTimeMillis();
-            RowIterator rows = query.execute().getRows();
-            //time = System.currentTimeMillis() - time;
 
-            List<SearchResult> results = new ArrayList<SearchResult>((int) rows.getSize());
-            while (rows.hasNext()) {
-                Row row = rows.nextRow();
-                SearchResult r = new SearchResult();
-                r.setScore(row.getScore());
-                r.setPath(row.getPath());
-                r.setExcerpt(row.getValue("rep:excerpt(jcr:content)").getString());
-                r.setData(row.getNode());
-                r.setTitle(row.getNode().getName());
-                results.add(r);
-            }
+        Query query = session.getWorkspace().getQueryManager().createQuery(stmt, Query.XPATH);
+        //long time = System.currentTimeMillis();
+        RowIterator rows = query.execute().getRows();
+        //time = System.currentTimeMillis() - time;
 
-            return results;
-        } finally {
-            if (session != null) session.logout();
+        List<SearchResult> results = new ArrayList<SearchResult>((int) rows.getSize());
+        while (rows.hasNext()) {
+            Row row = rows.nextRow();
+            SearchResult r = new SearchResult();
+            r.setScore(row.getScore());
+            r.setPath(row.getPath());
+            r.setExcerpt(row.getValue("rep:excerpt(jcr:content)").getString());
+            r.setData(row.getNode());
+            r.setTitle(row.getNode().getName());
+            results.add(r);
         }
 
+        return results;
     }
 
     @Override
-    public String suggestQuery(String q) throws RepositoryException {
-        Session session = jcrTemplate.getSessionFactory().getSession();
+    public String suggestQuery(Session session, String q) throws RepositoryException {
         Value v = session.getWorkspace().getQueryManager().createQuery(
                 "/jcr:root[rep:spellcheck('" + q + "')]/(rep:spellcheck())",
                 Query.XPATH).execute().getRows().nextRow().getValue("rep:spellcheck()");
@@ -146,8 +149,8 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
     }
 
     @Transactional
-    private Node getFolderForObject(ObjectWithID objectWithID, boolean createIfNotExists) throws RepositoryException {
-        Node rootNode = jcrTemplate.getRootNode();
+    private Node getFolderForObject(Session session, ObjectWithID objectWithID, boolean createIfNotExists) throws RepositoryException {
+        Node rootNode = session.getRootNode();
 
         final String entityFolderName = objectWithID.getClass().getSimpleName().toLowerCase();
         final Node entityFolder = createIfNotExists ?
@@ -163,37 +166,35 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                 JcrUtils.getNodeIfExists(entityFolder, objectFolderName);
     }
 
-    private void saveInputStream(Node parentFolder, InputStream inputStream, String fileName) throws RepositoryException {
+    private void saveInputStream(Session session, Node parentFolder, InputStream inputStream, String fileName) throws RepositoryException {
         String mimeType = MimeTypeUtils.getMimeTypeFromFileName(fileName);
-        saveInputStream(parentFolder, inputStream, fileName, mimeType);
+        saveInputStream(session, parentFolder, inputStream, fileName, mimeType);
     }
 
-    private void saveInputStream(Node parentFolder, InputStream inputStream, String fileName, String mimeType) throws RepositoryException {
+    private void saveInputStream(Session session, Node parentFolder, InputStream inputStream, String fileName, String mimeType) throws RepositoryException {
         assert parentFolder != null;
         Node file = JcrUtils.putFile(parentFolder, fileName, mimeType, inputStream);
         log.info("Saving file {}", file.getPath());
-        jcrTemplate.save();
+        session.save();
     }
 
 
     @Transactional
     @Override
-    public void saveAttachment(ObjectWithID objectWithID, MultipartFile multipartFile) throws RepositoryException, IOException {
+    public void saveAttachment(Session session, ObjectWithID objectWithID, MultipartFile multipartFile) throws RepositoryException, IOException {
 
-        Node objectFolder = getFolderForObject(objectWithID, true);
+        Node objectFolder = getFolderForObject(session, objectWithID, true);
         String originalFilename = multipartFile.getOriginalFilename();
         String mimeType = multipartFile.getContentType();
         InputStream inputStream = multipartFile.getInputStream();
 
-        saveInputStream(objectFolder, inputStream, originalFilename, mimeType);
-
-        jcrTemplate.save();
+        saveInputStream(session, objectFolder, inputStream, originalFilename, mimeType);
     }
 
     @Override
-    public void populateObjectWithFileInfos(ObjectWithAttachments objectWithAttachments) {
+    public void populateObjectWithFileInfos(Session session, ObjectWithAttachments objectWithAttachments) {
         try {
-            Node folder = getFolderForObject(objectWithAttachments, false);
+            Node folder = getFolderForObject(session, objectWithAttachments, false);
 
             if (folder == null) return;
 
@@ -230,7 +231,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                             } else {
                                 // resize the image
                                 InputStream inputStream = JcrUtils.readFile(fileNode);
-                                Binary thumbImage = resizeImage(inputStream);
+                                Binary thumbImage = resizeImage(session, inputStream);
 
                                 thumbFile = JcrUtils.putFile(folder, thumbName, mimeType, thumbImage.getStream());
 
@@ -263,7 +264,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
             objectWithAttachments.setAttachments(regularFileNames);
 
             if (changes) {
-                jcrTemplate.save();
+                session.save();
             }
 
         } catch (RepositoryException e) {
@@ -276,7 +277,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
     }
 
-    private Binary resizeImage(InputStream imageInputStream) throws RepositoryException, IOException {
+    private Binary resizeImage(Session session, InputStream imageInputStream) throws RepositoryException, IOException {
 
         BufferedImage originalImage = ImageIO.read(imageInputStream);
         int type = originalImage.getType() == 0 ? BufferedImage.TYPE_INT_ARGB : originalImage.getType();
@@ -302,9 +303,9 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
         g.drawImage(originalImage, 0, 0, thumbWidth, thumbHeight, null);
         g.dispose();
         g.setComposite(AlphaComposite.Src);
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g.setRenderingHint(RenderingHints.KEY_RENDERING,RenderingHints.VALUE_RENDER_QUALITY);
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         // providing the image in an InputStream
         ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -312,12 +313,12 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
         InputStream is = new ByteArrayInputStream(os.toByteArray());
 
         // create and return a binary from the InputStream
-        return jcrTemplate.getValueFactory().createBinary(is);
+        return session.getValueFactory().createBinary(is);
     }
 
     @Transactional()
     @Override
-    public FileInfo getImage(ObjectWithAttachments objectWithAttachments) {
+    public FileInfo getImage(Session session, ObjectWithAttachments objectWithAttachments) {
         // find
 
         return null;  //To change body of implemented methods use File | Settings | File Templates.
@@ -325,12 +326,12 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
     @Override
     @Transactional
-    public void removeRelatedFiles(ObjectWithID objectWithID) {
+    public void removeRelatedFiles(Session session, ObjectWithID objectWithID) {
         try {
-            Node objectFolder = getFolderForObject(objectWithID, false);
+            Node objectFolder = getFolderForObject(session, objectWithID, false);
             if (objectFolder == null) return;
             objectFolder.remove();
-            jcrTemplate.save();
+            session.save();
         } catch (RepositoryException e) {
             log.error(e.getMessage(), e);
             throw new RuntimeException(e);
@@ -338,11 +339,4 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
     }
 
-    public void setJcrTemplate(JcrTemplate jcrTemplate) {
-        this.jcrTemplate = jcrTemplate;
-    }
-
-    private void export() {
-        log.debug(jcrTemplate.dump(jcrTemplate.getRootNode()));
-    }
 }
