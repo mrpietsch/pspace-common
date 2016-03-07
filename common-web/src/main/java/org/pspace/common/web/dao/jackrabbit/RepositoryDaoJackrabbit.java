@@ -9,11 +9,15 @@ import org.pspace.common.web.dao.RepositoryDao;
 import org.pspace.common.web.mvc.MimeTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.imageio.ImageIO;
 import javax.jcr.*;
 import javax.jcr.query.Query;
@@ -30,7 +34,7 @@ import java.util.List;
  * @author peach
  */
 @Service("repositoryDao")
-public class RepositoryDaoJackrabbit implements RepositoryDao {
+public class RepositoryDaoJackrabbit implements RepositoryDao, InitializingBean, DisposableBean {
 
     private final Logger log = LoggerFactory.getLogger(RepositoryDaoJackrabbit.class);
 
@@ -51,28 +55,30 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
     @Autowired
     private Repository repository;
 
-//    private final static String ATTACHMENT_FOLDER = "attachments";
+    private Session session;
+
+    @PostConstruct
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        session = repository.login(new SimpleCredentials("username", "password".toCharArray()));
+    }
+
+    @PreDestroy
+    @Override
+    public void destroy() throws Exception {
+        if (session != null) session.logout();
+    }
+
+    //    private final static String ATTACHMENT_FOLDER = "attachments";
 //    private final static String GALLERY_FOLDER = "gallery";
 
     @Override
     @Transactional
-    public void importDirectory(Session session, final String fileName) throws Exception {
-        traverse(session, new File(fileName), session.getRootNode(), true);
+    public void importDirectory(final String fileName) throws Exception {
+        traverse(new File(fileName), session.getRootNode(), true);
     }
 
-    @Override
-    public <T> T doInSession(SessionAwareCallable<T> callable) throws Exception {
-        Session session = null;
-        try {
-            session = repository.login(new SimpleCredentials("username", "password".toCharArray()));
-            return callable.call(session);
-        } finally {
-            if (session != null) session.logout();
-        }
-    }
-
-
-    private void traverse(Session session, final File f, Node parentNode, boolean isRoot) throws IOException, RepositoryException {
+    private void traverse(final File f, Node parentNode, boolean isRoot) throws IOException, RepositoryException {
         if (f.isDirectory()) {
             // process directory
             final Node newParentNode;
@@ -86,7 +92,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                 for (File child : childs) {
                     // descend in recursion
                     if (!child.getName().matches(IGNORES_FILES_REGEX)) {
-                        traverse(session, child, newParentNode, false);
+                        traverse(child, newParentNode, false);
                     }
                 }
             }
@@ -97,7 +103,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                 is = new BufferedInputStream(new FileInputStream(f));
                 String name = f.getName();
                 log.info(String.format("Saving file %s in folder %s", f.getPath(), parentNode.getPath()));
-                saveInputStream(session, parentNode, is, name);
+                saveInputStream(parentNode, is, name);
             } finally {
                 if (is != null) is.close();
             }
@@ -105,7 +111,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
     }
 
     @Override
-    public List<SearchResult> search(Session session, String q) throws Exception {
+    public List<SearchResult> search(String q) throws Exception {
         final String stmt;
         // String queryTerms = "";
         if (q.startsWith("related:")) {
@@ -140,7 +146,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
     }
 
     @Override
-    public String suggestQuery(Session session, String q) throws RepositoryException {
+    public String suggestQuery( String q) throws RepositoryException {
         Value v = session.getWorkspace().getQueryManager().createQuery(
                 "/jcr:root[rep:spellcheck('" + q + "')]/(rep:spellcheck())",
                 Query.XPATH).execute().getRows().nextRow().getValue("rep:spellcheck()");
@@ -149,7 +155,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
     }
 
     @Transactional
-    private Node getFolderForObject(Session session, ObjectWithID objectWithID, boolean createIfNotExists) throws RepositoryException {
+    private Node getFolderForObject( ObjectWithID objectWithID, boolean createIfNotExists) throws RepositoryException {
         Node rootNode = session.getRootNode();
 
         final String entityFolderName = objectWithID.getClass().getSimpleName().toLowerCase();
@@ -166,12 +172,12 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                 JcrUtils.getNodeIfExists(entityFolder, objectFolderName);
     }
 
-    private void saveInputStream(Session session, Node parentFolder, InputStream inputStream, String fileName) throws RepositoryException {
+    private void saveInputStream( Node parentFolder, InputStream inputStream, String fileName) throws RepositoryException {
         String mimeType = MimeTypeUtils.getMimeTypeFromFileName(fileName);
-        saveInputStream(session, parentFolder, inputStream, fileName, mimeType);
+        saveInputStream(parentFolder, inputStream, fileName, mimeType);
     }
 
-    private void saveInputStream(Session session, Node parentFolder, InputStream inputStream, String fileName, String mimeType) throws RepositoryException {
+    private void saveInputStream( Node parentFolder, InputStream inputStream, String fileName, String mimeType) throws RepositoryException {
         assert parentFolder != null;
         Node file = JcrUtils.putFile(parentFolder, fileName, mimeType, inputStream);
         log.info("Saving file {}", file.getPath());
@@ -181,20 +187,20 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
     @Transactional
     @Override
-    public void saveAttachment(Session session, ObjectWithID objectWithID, MultipartFile multipartFile) throws RepositoryException, IOException {
+    public void saveAttachment( ObjectWithID objectWithID, MultipartFile multipartFile) throws RepositoryException, IOException {
 
-        Node objectFolder = getFolderForObject(session, objectWithID, true);
+        Node objectFolder = getFolderForObject(objectWithID, true);
         String originalFilename = multipartFile.getOriginalFilename();
         String mimeType = multipartFile.getContentType();
         InputStream inputStream = multipartFile.getInputStream();
 
-        saveInputStream(session, objectFolder, inputStream, originalFilename, mimeType);
+        saveInputStream(objectFolder, inputStream, originalFilename, mimeType);
     }
 
     @Override
-    public void populateObjectWithFileInfos(Session session, ObjectWithAttachments objectWithAttachments) {
+    public void populateObjectWithFileInfos( ObjectWithAttachments objectWithAttachments) {
         try {
-            Node folder = getFolderForObject(session, objectWithAttachments, false);
+            Node folder = getFolderForObject(objectWithAttachments, false);
 
             if (folder == null) return;
 
@@ -231,7 +237,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
                             } else {
                                 // resize the image
                                 InputStream inputStream = JcrUtils.readFile(fileNode);
-                                Binary thumbImage = resizeImage(session, inputStream);
+                                Binary thumbImage = resizeImage(inputStream);
 
                                 thumbFile = JcrUtils.putFile(folder, thumbName, mimeType, thumbImage.getStream());
 
@@ -277,7 +283,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
     }
 
-    private Binary resizeImage(Session session, InputStream imageInputStream) throws RepositoryException, IOException {
+    private Binary resizeImage( InputStream imageInputStream) throws RepositoryException, IOException {
 
         BufferedImage originalImage = ImageIO.read(imageInputStream);
         int type = originalImage.getType() == 0 ? BufferedImage.TYPE_INT_ARGB : originalImage.getType();
@@ -318,7 +324,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
     @Transactional()
     @Override
-    public FileInfo getImage(Session session, ObjectWithAttachments objectWithAttachments) {
+    public FileInfo getImage( ObjectWithAttachments objectWithAttachments) {
         // find
 
         return null;  //To change body of implemented methods use File | Settings | File Templates.
@@ -326,9 +332,9 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
 
     @Override
     @Transactional
-    public void removeRelatedFiles(Session session, ObjectWithID objectWithID) {
+    public void removeRelatedFiles( ObjectWithID objectWithID) {
         try {
-            Node objectFolder = getFolderForObject(session, objectWithID, false);
+            Node objectFolder = getFolderForObject(objectWithID, false);
             if (objectFolder == null) return;
             objectFolder.remove();
             session.save();
@@ -342,4 +348,5 @@ public class RepositoryDaoJackrabbit implements RepositoryDao {
     public void setRepository(Repository repository) {
         this.repository = repository;
     }
+
 }

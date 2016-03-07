@@ -33,7 +33,6 @@ public interface GenericManager<T, PK extends Serializable> extends Converter<St
      *
      * @param id the identifier (primary key) of the object to get
      * @return a populated object
-     * @see org.springframework.orm.ObjectRetrievalFailureException
      */
     T get(PK id);
 
@@ -54,8 +53,8 @@ public interface GenericManager<T, PK extends Serializable> extends Converter<St
     T save(T object);
 
     List<T> saveAll(List<T> object);
-
-    List<T> search(String query);
+//
+//    List<T> search(String query);
 
     /**
      * Generic method to delete an object based on class and id
@@ -64,7 +63,7 @@ public interface GenericManager<T, PK extends Serializable> extends Converter<St
      */
     void remove(PK id) throws Exception;
 
-    void reindex();
-
-    void reindexAll(boolean async);
+//    void reindex();
+//
+//    void reindexAll(boolean async);
 }

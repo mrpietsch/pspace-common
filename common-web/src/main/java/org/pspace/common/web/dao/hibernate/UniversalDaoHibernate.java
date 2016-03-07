@@ -1,22 +1,22 @@
 package org.pspace.common.web.dao.hibernate;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.util.Version;
 import org.hibernate.*;
+import org.hibernate.metadata.ClassMetadata;
+import org.hibernate.persister.entity.AbstractEntityPersister;
 import org.hibernate.search.FullTextSession;
 import org.hibernate.search.Search;
 import org.hibernate.search.SearchException;
 import org.pspace.common.web.dao.UniversalDao;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.hibernate.metadata.ClassMetadata;
-import org.hibernate.persister.entity.AbstractEntityPersister;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.orm.ObjectRetrievalFailureException;
 
-import javax.annotation.Resource;
 import java.io.Serializable;
 import java.util.*;
 
@@ -27,7 +27,16 @@ import java.util.*;
  *
  * @author Bryan Noll
  */
+@Deprecated
 public class UniversalDaoHibernate implements UniversalDao {
+
+    private SessionFactory sessionFactory;
+
+    @Autowired
+    public UniversalDaoHibernate(SessionFactory sessionFactory) {
+        this.sessionFactory = sessionFactory;
+        log.warn("I am DEPRECATED. Use JPA Repository instead.");
+    }
 
     /**
      * Log variable for all child classes. Uses LogFactory.getLog(getClass()) from Commons Logging
@@ -35,8 +44,6 @@ public class UniversalDaoHibernate implements UniversalDao {
     protected final Log log = LogFactory.getLog(getClass());
     private final Analyzer defaultAnalyzer = new StandardAnalyzer(Version.LUCENE_36);
 
-    @Resource
-    private SessionFactory sessionFactory;
 
     /**
      * {@inheritDoc}

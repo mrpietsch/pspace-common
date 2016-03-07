@@ -1,11 +1,12 @@
 package org.pspace.common.web.services;
 
+import org.apache.commons.collections.IteratorUtils;
 import org.pspace.common.api.GenericManager;
 import org.pspace.common.api.ObjectWithID;
-import org.pspace.common.web.dao.UniversalDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.repository.PagingAndSortingRepository;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.Serializable;
@@ -20,6 +21,7 @@ import java.util.List;
  * @param <PK> the primary key for that type
  */
 @Transactional
+@Component
 public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Serializable>
         implements GenericManager<T, PK> {
 
@@ -33,16 +35,17 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
     /**
      * GenericDao instance, set by constructor of this class
      */
-    @Autowired
-    protected UniversalDao dao;
+    protected final PagingAndSortingRepository<T, PK> dao;
 
     /**
      * Public constructor for creating a new GenericManagerImpl.
      *
      * @param objectClass ...
+     * @param dao
      */
-    protected GenericManagerImpl(Class<T> objectClass) {
+    protected GenericManagerImpl(Class<T> objectClass, PagingAndSortingRepository<T, PK> dao) {
         this.objectClass = objectClass;
+        this.dao = dao;
     }
 
     /**
@@ -50,12 +53,12 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
      */
     @Override
     public List<T> getAll() {
-        return dao.getAll(objectClass);
+        return IteratorUtils.toList(dao.findAll().iterator());
     }
 
     @Override
     public long countAll() {
-        return dao.count(objectClass);
+        return dao.count();
     }
 
     /**
@@ -63,7 +66,7 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
      */
     @Override
     public T get(PK id) {
-        return dao.get(objectClass, id);
+        return dao.findOne(id);
     }
 
     /**
@@ -71,7 +74,7 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
      */
     @Override
     public boolean exists(PK id) {
-        return dao.exists(objectClass, id);
+        return dao.exists(id);
     }
 
     /**
@@ -89,13 +92,13 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
      */
     @Override
     public List<T> saveAll(List<T> object) {
-        return dao.saveAll(object);
+        return IteratorUtils.toList(dao.save(object).iterator());
     }
 
-    @Override
-    public List<T> search(String query) {
-        return dao.search(objectClass, query);
-    }
+//    @Override
+//    public List<T> search(String query) {
+//        return dao.search(objectClass, query);
+//    }
 
     /**
      * {@inheritDoc}
@@ -103,39 +106,35 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
     @Override
     public void remove(PK id) throws Exception {
         if (log.isDebugEnabled()) log.debug("Deleting object of type " + objectClass + " with id " + id);
-        dao.remove(objectClass, id);
+        dao.delete(id);
     }
 
-    public void setDao(UniversalDao dao) {
-        this.dao = dao;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public T convert(String source) {
-        if (source == null || source.isEmpty()) {
-            return null;
-        } else {
-            // parsing would not be necessary but I want to be sure I get a number here
-            Serializable l = Long.parseLong(source);
-            return dao.get(objectClass, l);
-        }
-    }
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    public T convert(String source) {
+//        if (source == null || source.isEmpty()) {
+//            return null;
+//        } else {
+//            // parsing would not be necessary but I want to be sure I get a number here
+//            Serializable l = Long.parseLong(source);
+//            return dao.findOne(source);
+//        }
+//    }
 
 
-    @Override
-    public void reindex() {
-        dao.reindex(objectClass);
-    }
-
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void reindexAll(boolean async) {
-        dao.reindexAll(async);
-    }
+//    @Override
+//    public void reindex() {
+//        dao.reindex(objectClass);
+//    }
+//
+//
+//    /**
+//     * {@inheritDoc}
+//     */
+//    @Override
+//    public void reindexAll(boolean async) {
+//        dao.reindexAll(async);
+//    }
 }
