@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,7 +42,10 @@ public class RepositoryDaoJackrabbit implements RepositoryDao, InitializingBean,
     private static final String THUMBNAIL_PREFIX = "th_";
     private static final String IGNORES_FILES_REGEX = "(\\.DS_Store|\\._\\.DS_Store|\\._.*)";
 
+    @Value("${maxThumbnailHeight:50}")
     private int maxThumbnailHeight = 50;
+
+    @Value("${maxThumbnailWidth:100}")
     private int maxThumbnailWidth = 100;
 
     public void setMaxThumbnailHeight(int maxThumbnailHeight) {
@@ -147,7 +151,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao, InitializingBean,
 
     @Override
     public String suggestQuery( String q) throws RepositoryException {
-        Value v = session.getWorkspace().getQueryManager().createQuery(
+        javax.jcr.Value v = session.getWorkspace().getQueryManager().createQuery(
                 "/jcr:root[rep:spellcheck('" + q + "')]/(rep:spellcheck())",
                 Query.XPATH).execute().getRows().nextRow().getValue("rep:spellcheck()");
         session.logout();
