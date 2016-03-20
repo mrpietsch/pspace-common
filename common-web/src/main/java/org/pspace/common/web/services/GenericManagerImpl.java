@@ -104,7 +104,7 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
      * {@inheritDoc}
      */
     @Override
-    public void remove(PK id) throws Exception {
+    public void remove(PK id) {
         if (log.isDebugEnabled()) log.debug("Deleting object of type " + objectClass + " with id " + id);
         dao.delete(id);
     }

@@ -4,7 +4,9 @@ import javax.servlet.jsp.JspException;
 
 /**
  * @author peach
+ * @deprecated use spring-hateoas
  */
+@Deprecated
 public class LinkByControllerMethodTag extends AuthByControllerMethodTag {
     private static final long serialVersionUID = -1493357742073187977L;
 

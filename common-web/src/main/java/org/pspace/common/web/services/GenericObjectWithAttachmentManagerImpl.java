@@ -40,7 +40,7 @@ public abstract class GenericObjectWithAttachmentManagerImpl<T extends ObjectWit
 
     @Override
     @Transactional
-    public void remove(final PK id) throws Exception {
+    public void remove(final PK id) {
         T obj = get(id);
         repositoryDao.removeRelatedFiles(obj);
         GenericObjectWithAttachmentManagerImpl.super.remove(id);
