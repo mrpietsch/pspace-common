@@ -48,6 +48,12 @@ public class RepositoryDaoJackrabbit implements RepositoryDao, InitializingBean,
     @Value("${maxThumbnailWidth:100}")
     private int maxThumbnailWidth = 100;
 
+    @Value("${jackrabbit.username}")
+    private String username;
+
+    @Value("${jackrabbit.password}")
+    private String password;
+
     public void setMaxThumbnailHeight(int maxThumbnailHeight) {
         this.maxThumbnailHeight = maxThumbnailHeight;
     }
@@ -64,7 +70,7 @@ public class RepositoryDaoJackrabbit implements RepositoryDao, InitializingBean,
     @PostConstruct
     @Override
     public void afterPropertiesSet() throws Exception {
-        session = repository.login(new SimpleCredentials("username", "password".toCharArray()));
+        session = repository.login(new SimpleCredentials(username, password.toCharArray()));
     }
 
     @PreDestroy
