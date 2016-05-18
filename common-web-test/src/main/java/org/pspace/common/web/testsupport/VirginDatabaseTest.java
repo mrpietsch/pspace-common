@@ -21,7 +21,6 @@ public abstract class VirginDatabaseTest {
 
     @Autowired DataSource dataSource;
 
-    @Before
     public void clearDatabase() {
         Flyway flyway = new Flyway();
         flyway.setDataSource(dataSource);
