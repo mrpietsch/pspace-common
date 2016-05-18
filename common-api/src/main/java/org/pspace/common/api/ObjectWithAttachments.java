@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * @author peach
  */
-public abstract class ObjectWithAttachments<PK extends Number> implements ObjectWithID<PK> {
+public abstract class ObjectWithAttachments implements ObjectWithID {
 
     @Transient
     private List<FileInfo> attachments = new ArrayList<FileInfo>();

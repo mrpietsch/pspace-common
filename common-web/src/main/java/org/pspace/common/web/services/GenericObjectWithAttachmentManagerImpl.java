@@ -11,16 +11,15 @@ import java.util.List;
 /**
  * @author mrpietsch
  */
-public abstract class GenericObjectWithAttachmentManagerImpl<T extends ObjectWithAttachments<PK>, PK extends Number>
-        extends GenericManagerImpl<T, PK>
-        implements GenericObjectsWithAttachmentsManager<T, PK> {
+public abstract class GenericObjectWithAttachmentManagerImpl<T extends ObjectWithAttachments, REPO extends PagingAndSortingRepository<T, Long>>
+        extends GenericManagerImpl<T, REPO>
+        implements GenericObjectsWithAttachmentsManager<T> {
 
     protected final RepositoryDao repositoryDao;
 
-    public GenericObjectWithAttachmentManagerImpl(Class<T> objectClass,
-                                                  PagingAndSortingRepository<T, PK> dao,
+    public GenericObjectWithAttachmentManagerImpl(REPO dao,
                                                   RepositoryDao repositoryDao) {
-        super(objectClass, dao);
+        super(dao);
         this.repositoryDao = repositoryDao;
     }
 
@@ -32,7 +31,7 @@ public abstract class GenericObjectWithAttachmentManagerImpl<T extends ObjectWit
         return list;
     }
 
-    public T getIncludingAttachmentAndImage(final PK id) throws Exception {
+    public T getIncludingAttachmentAndImage(final Long id) throws Exception {
         T obj = get(id);
         repositoryDao.populateObjectWithFileInfos(obj);
         return obj;
@@ -40,7 +39,7 @@ public abstract class GenericObjectWithAttachmentManagerImpl<T extends ObjectWit
 
     @Override
     @Transactional
-    public void remove(final PK id) {
+    public void remove(final Long id) {
         T obj = get(id);
         repositoryDao.removeRelatedFiles(obj);
         GenericObjectWithAttachmentManagerImpl.super.remove(id);

@@ -1,15 +1,21 @@
 package org.pspace.common.web.services;
 
 import org.apache.commons.collections.IteratorUtils;
+import org.apache.lucene.search.Query;
+import org.hibernate.search.jpa.FullTextEntityManager;
+import org.hibernate.search.jpa.FullTextQuery;
+import org.hibernate.search.jpa.Search;
+import org.hibernate.search.query.dsl.QueryBuilder;
 import org.pspace.common.api.GenericManager;
 import org.pspace.common.api.ObjectWithID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.Serializable;
+import javax.persistence.EntityManager;
 import java.util.List;
 
 /**
@@ -17,34 +23,30 @@ import java.util.List;
  * common CRUD methods that they might all use. You should only need to extend
  * this class when your require custom CRUD logic.
  *
- * @param <T>  a type variable
- * @param <PK> the primary key for that type
+ * @param <T> a type variable
  */
 @Transactional
-@Component
-public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Serializable>
-        implements GenericManager<T, PK> {
+public abstract class GenericManagerImpl<T extends ObjectWithID, REPO extends PagingAndSortingRepository<T, Long>>
+        implements GenericManager<T> {
 
+    @Autowired
+    EntityManager entityManager;
     /**
      * Log variable for all child classes. Uses LogFactory.getLog(getClass()) from Commons Logging
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
-    final Class<T> objectClass;
-
     /**
      * GenericDao instance, set by constructor of this class
      */
-    protected final PagingAndSortingRepository<T, PK> dao;
+    protected final REPO dao;
 
     /**
      * Public constructor for creating a new GenericManagerImpl.
      *
-     * @param objectClass ...
      * @param dao
      */
-    protected GenericManagerImpl(Class<T> objectClass, PagingAndSortingRepository<T, PK> dao) {
-        this.objectClass = objectClass;
+    protected GenericManagerImpl(REPO dao) {
         this.dao = dao;
     }
 
@@ -65,7 +67,7 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
      * {@inheritDoc}
      */
     @Override
-    public T get(PK id) {
+    public T get(Long id) {
         return dao.findOne(id);
     }
 
@@ -73,7 +75,7 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
      * {@inheritDoc}
      */
     @Override
-    public boolean exists(PK id) {
+    public boolean exists(Long id) {
         return dao.exists(id);
     }
 
@@ -83,7 +85,8 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
     @Override
     public T save(T object) {
         T newObject = dao.save(object);
-        if (log.isDebugEnabled()) log.debug("Saved object of type " + newObject.getClass() + " with id " + newObject.getId());
+        if (log.isDebugEnabled())
+            log.debug("Saved object of type " + newObject.getClass() + " with id " + newObject.getId());
         return newObject;
     }
 
@@ -95,46 +98,43 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, PK extends Seri
         return IteratorUtils.toList(dao.save(object).iterator());
     }
 
-//    @Override
-//    public List<T> search(String query) {
-//        return dao.search(objectClass, query);
-//    }
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<T> search(Class<T> entityClass, String queryString) {
+
+        // get the full text entity manager
+        FullTextEntityManager fullTextEntityManager = Search.getFullTextEntityManager(entityManager);
+
+        // create the query using Hibernate Search query DSL
+        QueryBuilder queryBuilder = fullTextEntityManager
+                .getSearchFactory()
+                .buildQueryBuilder()
+                .forEntity(entityClass)
+                .get();
+
+        Query query = queryBuilder.keyword().onField("").matching(queryString).createQuery();
+
+        // wrap Lucene query in an Hibernate Query object
+        FullTextQuery jpaQuery = fullTextEntityManager.createFullTextQuery(query, entityClass);
+
+        // execute search and return results (sorted by relevance as default)
+        return jpaQuery.getResultList();
+    }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void remove(PK id) {
-        if (log.isDebugEnabled()) log.debug("Deleting object of type " + objectClass + " with id " + id);
+    public void remove(Long id) {
+        if (log.isDebugEnabled())
+            log.debug("Deleting object of type from " + this.getClass().getSimpleName() + " with id " + id);
         dao.delete(id);
     }
 
-//    /**
-//     * {@inheritDoc}
-//     */
-//    @Override
-//    public T convert(String source) {
-//        if (source == null || source.isEmpty()) {
-//            return null;
-//        } else {
-//            // parsing would not be necessary but I want to be sure I get a number here
-//            Serializable l = Long.parseLong(source);
-//            return dao.findOne(source);
-//        }
-//    }
+    @Override
+    public T convert(String source) {
+        return dao.findOne(Long.parseLong(source));
+    }
 
 
-//    @Override
-//    public void reindex() {
-//        dao.reindex(objectClass);
-//    }
-//
-//
-//    /**
-//     * {@inheritDoc}
-//     */
-//    @Override
-//    public void reindexAll(boolean async) {
-//        dao.reindexAll(async);
-//    }
 }

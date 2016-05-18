@@ -9,7 +9,7 @@
 if "%OS%"=="Windows_NT" setlocal
 
 @rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
-set DEFAULT_JVM_OPTS="-Djavax.net.ssl.trustStore=/Users/peach/Development/Certs/truststore-pspace.jks -Djavax.net.ssl.trustStorePassword=19a6d310065ecd79b0bd7eda2a04d5ed"
+set DEFAULT_JVM_OPTS="-Djavax.net.ssl.trustStore=truststore-pspace.jks -Djavax.net.ssl.trustStorePassword=19a6d310065ecd79b0bd7eda2a04d5ed"
 
 set DIRNAME=%~dp0
 if "%DIRNAME%" == "" set DIRNAME=.

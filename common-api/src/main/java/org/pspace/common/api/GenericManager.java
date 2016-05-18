@@ -12,9 +12,8 @@ import java.util.List;
  * for your domain objects.
  *
  * @param <T> a type variable
- * @param <PK> the primary key for that type
  */
-public interface GenericManager<T, PK extends Serializable> extends Converter<String, T> {
+public interface GenericManager<T> extends Converter<String, T> {
 
     /**
      * Generic method used to get all objects of a particular type. This
@@ -34,7 +33,7 @@ public interface GenericManager<T, PK extends Serializable> extends Converter<St
      * @param id the identifier (primary key) of the object to get
      * @return a populated object
      */
-    T get(PK id);
+    T get(Long id);
 
     /**
      * Checks for existence of an object of type T using the id arg.
@@ -42,7 +41,7 @@ public interface GenericManager<T, PK extends Serializable> extends Converter<St
      * @param id the identifier (primary key) of the object to get
      * @return - true if it exists, false if it doesn't
      */
-    boolean exists(PK id);
+    boolean exists(Long id);
 
     /**
      * Generic method to save an object - handles both update and insert.
@@ -54,14 +53,14 @@ public interface GenericManager<T, PK extends Serializable> extends Converter<St
 
     List<T> saveAll(List<T> object);
 //
-//    List<T> search(String query);
+    List<T> search(Class<T> entityClass, String query);
 
     /**
      * Generic method to delete an object based on class and id
      *
      * @param id the identifier (primary key) of the object to remove
      */
-    void remove(PK id);
+    void remove(Long id);
 
 //    void reindex();
 //

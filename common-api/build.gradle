@@ -3,4 +3,5 @@ description = 'common-api'
 dependencies {
     compile group: 'org.hibernate.javax.persistence', name: 'hibernate-jpa-2.1-api', version:'1.0.0.Final'
     compile "org.springframework.boot:spring-boot-starter:1.3.3.RELEASE"
+    compileOnly "org.projectlombok:lombok:1.16.8"
 }

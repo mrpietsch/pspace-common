@@ -1,1 +1,1 @@
-include 'common-util', 'common-api', 'common-web'
+include 'common-util', 'common-api', 'common-web', 'common-web-test'
