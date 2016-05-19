@@ -100,7 +100,7 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, REPO extends Pa
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<T> search(Class<T> entityClass, String queryString) {
+    public List<T> search(Class<T> entityClass, String queryString, String ... fields) {
 
         // get the full text entity manager
         FullTextEntityManager fullTextEntityManager = Search.getFullTextEntityManager(entityManager);
@@ -112,7 +112,7 @@ public abstract class GenericManagerImpl<T extends ObjectWithID, REPO extends Pa
                 .forEntity(entityClass)
                 .get();
 
-        Query query = queryBuilder.keyword().onField("").matching(queryString).createQuery();
+        Query query = queryBuilder.keyword().onFields(fields).matching(queryString).createQuery();
 
         // wrap Lucene query in an Hibernate Query object
         FullTextQuery jpaQuery = fullTextEntityManager.createFullTextQuery(query, entityClass);

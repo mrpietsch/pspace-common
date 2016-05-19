@@ -53,7 +53,7 @@ public interface GenericManager<T> extends Converter<String, T> {
 
     List<T> saveAll(List<T> object);
 //
-    List<T> search(Class<T> entityClass, String query);
+    List<T> search(Class<T> entityClass, String query, String ... fields);
 
     /**
      * Generic method to delete an object based on class and id
