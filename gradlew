@@ -7,7 +7,8 @@
 ##############################################################################
 
 # Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
-DEFAULT_JVM_OPTS="-Djavax.net.ssl.trustStore=truststore-pspace.jks -Djavax.net.ssl.trustStorePassword=19a6d310065ecd79b0bd7eda2a04d5ed"
+#DEFAULT_JVM_OPTS="-Djavax.net.ssl.trustStore=truststore-pspace.jks -Djavax.net.ssl.trustStorePassword=19a6d310065ecd79b0bd7eda2a04d5ed"
+DEFAULT_JVM_OPTS=""
 
 APP_NAME="Gradle"
 APP_BASE_NAME=`basename "$0"`
