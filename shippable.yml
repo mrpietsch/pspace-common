@@ -1,0 +1,14 @@
+language: java
+
+jdk:
+  - oraclejdk8
+
+build:
+  pre_ci:
+    - mkdir -p shippable/testresults
+  ci:
+    - ./gradlew clean assemble
+    - ./gradlew uploadArchives
+  post_ci:
+    - cp -r build/test-results/* shippable/testresults/
+  
