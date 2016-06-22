@@ -8,7 +8,7 @@ build:
     - mkdir -p shippable/testresults
   ci:
     - ./gradlew clean assemble
-    - ./gradlew uploadArchives
+    - ./gradlew-ssl uploadArchives
   post_ci:
     - cp -r build/test-results/* shippable/testresults/
   

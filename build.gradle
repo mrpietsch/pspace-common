@@ -16,7 +16,7 @@ allprojects {
                 password "e7db1b69911f3f7fae798c4dcfd2c516"
             }
             name "pspace_releases"
-            url "https://www.p-space.org/maven2/releases/"
+            url "http://www.p-space.org/maven2/releases/"
         }
         maven {
             credentials {
@@ -24,7 +24,7 @@ allprojects {
                 password "e7db1b69911f3f7fae798c4dcfd2c516"
             }
             name "pspace_snapshots"
-            url "https://www.p-space.org/maven2/snapshots/"
+            url "http://www.p-space.org/maven2/snapshots/"
         }
         maven { url "https://repository.jboss.org/nexus/content/groups/public-jboss/" }
         maven { url "http://repo.maven.apache.org/maven2" }
