@@ -4,11 +4,9 @@ jdk:
   - oraclejdk8
 
 build:
-  pre_ci:
-    - mkdir -p shippable/testresults
   ci:
+    - mkdir -p shippable/testresults
     - ./gradlew clean check 
-    - ./gradlew-ssl uploadArchives
-  post_ci:
     - cp -r build/test-results/* shippable/testresults/
+    - ./gradlew-ssl uploadArchives
   
