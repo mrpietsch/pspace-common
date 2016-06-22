@@ -5,8 +5,6 @@ jdk:
 
 build:
   ci:
-    - mkdir -p shippable/testresults
     - ./gradlew clean check 
-    - cp -r build/test-results/* shippable/testresults/
     - ./gradlew-ssl uploadArchives
   
