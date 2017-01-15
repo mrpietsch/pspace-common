@@ -6,5 +6,5 @@ jdk:
 build:
   ci:
     - ./gradlew clean check 
-    - ./gradlew-ssl uploadArchives
+    - ./gradlew-ssl publish
   
