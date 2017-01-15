@@ -11,21 +11,22 @@ allprojects {
         mavenCentral()
 
         maven {
-            credentials {
-                username "maven"
-                password "e7db1b69911f3f7fae798c4dcfd2c516"
+            name "pspace-mvn-repo-releases"
+            url "s3://pspace-mvn-repo.s3.eu-central-1.amazonaws.com/releases"
+            credentials(AwsCredentials) {
+                accessKey "AKIAIBITGTZMHHA3OXCA"
+                secretKey "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"
             }
-            name "pspace_releases"
-            url "http://www.p-space.org/maven2/releases/"
         }
         maven {
-            credentials {
-                username "maven"
-                password "e7db1b69911f3f7fae798c4dcfd2c516"
+            name "pspace-mvn-repo-snapshots"
+            url "s3://pspace-mvn-repo.s3.eu-central-1.amazonaws.com/snapshots"
+            credentials(AwsCredentials) {
+                accessKey "AKIAIBITGTZMHHA3OXCA"
+                secretKey "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"
             }
-            name "pspace_snapshots"
-            url "http://www.p-space.org/maven2/snapshots/"
         }
+
         maven { url "https://repository.jboss.org/nexus/content/groups/public-jboss/" }
         maven { url "http://repo.maven.apache.org/maven2" }
     }
@@ -35,41 +36,32 @@ allprojects {
 subprojects {
     apply plugin: 'java'
     apply plugin: 'maven'
+    apply plugin: 'maven-publish'
 
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 
     task packageSources(type: Jar)
 
-    // -----------------------------------------------------------------------------------------------------------------
-    // DEPLOYMENT CONFIGURATION
-    // -----------------------------------------------------------------------------------------------------------------
-    task sourcesJar(type: Jar, dependsOn: classes) {
-        classifier = 'sources'
-        from sourceSets.main.allSource
-    }
-
-    configurations {
-        deployerJars
-    }
-    artifacts {
-        deployerJars jar
-        archives sourcesJar
-    }
-    dependencies {
-        deployerJars "org.apache.maven.wagon:wagon-webdav:1.0-beta-2"
-    }
-
-    uploadArchives {
+    publishing {
         repositories {
-            mavenDeployer {
-                configuration = configurations.deployerJars
-                repository(url: "dav:https://www.p-space.org/maven2/releases/"){
-                    authentication(userName: "maven", password: "e7db1b69911f3f7fae798c4dcfd2c516")
+            maven {
+                if(project.version.endsWith('-SNAPSHOT')) {
+                    url "s3://pspace-mvn-repo.s3.eu-central-1.amazonaws.com/snapshots"
+                } else {
+                    url "s3://pspace-mvn-repo.s3.eu-central-1.amazonaws.com/releases"
                 }
-                snapshotRepository(url: "dav:https://www.p-space.org/maven2/snapshots/"){
-                    authentication(userName: "maven", password: "e7db1b69911f3f7fae798c4dcfd2c516")
+
+                credentials(AwsCredentials) {
+                    accessKey "${AWS_ACCESS_KEY}"
+                    secretKey "${AWS_SECRET_KEY}"
                 }
+            }
+        }
+
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
             }
         }
     }
