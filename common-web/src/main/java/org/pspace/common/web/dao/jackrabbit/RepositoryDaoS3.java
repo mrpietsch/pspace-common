@@ -27,7 +27,8 @@ import java.util.List;
 @org.springframework.stereotype.Repository("repositoryDaoS3")
 public class RepositoryDaoS3 extends AbstractRepositoryDao implements RepositoryDao {
 
-    private final Logger log = LoggerFactory.getLogger(RepositoryDaoS3.class);
+    private static final String FOLDER_DELIMITER = "/";
+    private final Logger        log              = LoggerFactory.getLogger(RepositoryDaoS3.class);
 
     private static final String THUMBNAIL_PREFIX    = "th_";
     private static final String IGNORES_FILES_REGEX = "(\\.DS_Store|\\._\\.DS_Store|\\._.*)";
@@ -54,7 +55,7 @@ public class RepositoryDaoS3 extends AbstractRepositoryDao implements Repository
     private String getFolderForObject(ObjectWithID objectWithID) {
         String entityFolderName = objectWithID.getClass().getSimpleName().toLowerCase();
         String objectFolderName = objectWithID.getId().toString();
-        return entityFolderName + "/" + objectFolderName;
+        return entityFolderName + FOLDER_DELIMITER + objectFolderName;
     }
 
     private void saveInputStream(InputStream inputStream, String mimeType, String filePath) {
@@ -67,11 +68,12 @@ public class RepositoryDaoS3 extends AbstractRepositoryDao implements Repository
 
     @Override
     public void saveAttachment(ObjectWithID objectWithID, MultipartFile multipartFile) throws RepositoryException, IOException {
-        String filePath = getFolderForObject(objectWithID) + "/" + multipartFile.getOriginalFilename();
+        String filePath = getFolderForObject(objectWithID) + FOLDER_DELIMITER + multipartFile.getOriginalFilename();
         saveInputStream(
                 multipartFile.getInputStream(),
                 multipartFile.getContentType(),
-                filePath);
+                filePath
+        );
     }
 
     @Override
@@ -92,9 +94,9 @@ public class RepositoryDaoS3 extends AbstractRepositoryDao implements Repository
 
                 ObjectMetadata objectMetadata = amazonS3Client.getObjectMetadata(bucketName, fileNode.getKey());
 
-                String   mimeType = objectMetadata.getContentType();
-                String[] split    = fileNode.getKey().split("/");
-                String   name     = split[split.length - 1];
+                String   mimeType         = objectMetadata.getContentType();
+                String[] filePathSegments = fileNode.getKey().split(FOLDER_DELIMITER);
+                String   name             = filePathSegments[filePathSegments.length - 1];
 
                 if (mimeType.startsWith("image/")) {
 
@@ -135,19 +137,28 @@ public class RepositoryDaoS3 extends AbstractRepositoryDao implements Repository
      * Look if there is a thumbnail and create one if not
      */
     private String makeSureThumbnailExists(String folder, String mimeType, String name) throws IOException {
-        String thumbName = THUMBNAIL_PREFIX + name;
-        String thumbPath = folder + "/" + thumbName;
+        String thumbPath    = getThumbnailPathForImage(folder, name);
+        String originalPath = folder + FOLDER_DELIMITER + name;
 
         if (!amazonS3Client.doesObjectExist(bucketName, thumbPath)) {
-            // resize the image
-            InputStream originalImageData = amazonS3Client.getObject(bucketName, thumbName).getObjectContent();
-            InputStream thumbImageData    = resizeImage(originalImageData);
-
-            log.info("Saving thumbnail {}", thumbName);
-            saveInputStream(thumbImageData, mimeType, thumbPath);
+            createThumbnail(originalPath, thumbPath, mimeType);
         }
 
         return thumbPath;
+    }
+
+    private String getThumbnailPathForImage(String folder, String name) {
+        String thumbName = THUMBNAIL_PREFIX + name;
+        return folder + FOLDER_DELIMITER + thumbName;
+    }
+
+    private void createThumbnail(String originalPath, String thumbPath, String mimeType) throws IOException {
+        // resize the image
+        InputStream originalImageData = amazonS3Client.getObject(bucketName, originalPath).getObjectContent();
+        InputStream thumbImageData    = resizeImage(originalImageData);
+
+        log.info("Saving thumbnail {}", thumbPath);
+        saveInputStream(thumbImageData, mimeType, thumbPath);
     }
 
     @Override
