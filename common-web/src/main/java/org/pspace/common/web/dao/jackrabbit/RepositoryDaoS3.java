@@ -8,49 +8,25 @@ import org.pspace.common.api.ImageFileInfo;
 import org.pspace.common.api.ObjectWithAttachments;
 import org.pspace.common.api.ObjectWithID;
 import org.pspace.common.web.dao.RepositoryDao;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Repository;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.jcr.RepositoryException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * @author peach
- */
-@org.springframework.stereotype.Repository("repositoryDaoS3")
+@Repository("repositoryDaoS3")
 public class RepositoryDaoS3 extends AbstractRepositoryDao implements RepositoryDao {
 
-    private static final String FOLDER_DELIMITER = "/";
-    private final Logger        log              = LoggerFactory.getLogger(RepositoryDaoS3.class);
-
-    private static final String THUMBNAIL_PREFIX    = "th_";
-    private static final String IGNORES_FILES_REGEX = "(\\.DS_Store|\\._\\.DS_Store|\\._.*)";
-
-    @Value("${maxThumbnailHeight:50}")
-    private int maxThumbnailHeight = 50;
-
-    @Value("${maxThumbnailWidth:100}")
-    private int maxThumbnailWidth = 100;
+    private static final Character FOLDER_DELIMITER = '/';
 
     @Autowired
     AmazonS3Client amazonS3Client;
 
     String bucketName;
-
-    public void setMaxThumbnailHeight(int maxThumbnailHeight) {
-        this.maxThumbnailHeight = maxThumbnailHeight;
-    }
-
-    public void setMaxThumbnailWidth(int maxThumbnailWidth) {
-        this.maxThumbnailWidth = maxThumbnailWidth;
-    }
 
     private String getFolderForObject(ObjectWithID objectWithID) {
         String entityFolderName = objectWithID.getClass().getSimpleName().toLowerCase();
@@ -67,7 +43,7 @@ public class RepositoryDaoS3 extends AbstractRepositoryDao implements Repository
     }
 
     @Override
-    public void saveAttachment(ObjectWithID objectWithID, MultipartFile multipartFile) throws RepositoryException, IOException {
+    public void saveAttachment(ObjectWithID objectWithID, MultipartFile multipartFile) throws IOException {
         String filePath = getFolderForObject(objectWithID) + FOLDER_DELIMITER + multipartFile.getOriginalFilename();
         saveInputStream(
                 multipartFile.getInputStream(),
@@ -95,7 +71,7 @@ public class RepositoryDaoS3 extends AbstractRepositoryDao implements Repository
                 ObjectMetadata objectMetadata = amazonS3Client.getObjectMetadata(bucketName, fileNode.getKey());
 
                 String   mimeType         = objectMetadata.getContentType();
-                String[] filePathSegments = fileNode.getKey().split(FOLDER_DELIMITER);
+                String[] filePathSegments = fileNode.getKey().split(FOLDER_DELIMITER.toString());
                 String   name             = filePathSegments[filePathSegments.length - 1];
 
                 if (mimeType.startsWith("image/")) {
@@ -171,12 +147,11 @@ public class RepositoryDaoS3 extends AbstractRepositoryDao implements Repository
     @Override
 
     public void removeRelatedFiles(ObjectWithID objectWithID) {
-        getRelatedFiles(objectWithID)
-                .stream()
-                .map(S3ObjectSummary::getKey)
-                .forEach(
-                        fileName -> amazonS3Client.deleteObject(bucketName, fileName)
-                );
+        List<S3ObjectSummary> relatedFiles = getRelatedFiles(objectWithID);
+
+        for (S3ObjectSummary s3Object : relatedFiles) {
+            amazonS3Client.deleteObject(bucketName, s3Object.getKey());
+        }
     }
 
     private List<S3ObjectSummary> getRelatedFiles(ObjectWithID objectWithID) {

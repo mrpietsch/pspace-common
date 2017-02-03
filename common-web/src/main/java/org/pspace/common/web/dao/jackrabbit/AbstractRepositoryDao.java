@@ -18,7 +18,7 @@ abstract class AbstractRepositoryDao implements RepositoryDao {
     protected static final String THUMBNAIL_PREFIX    = "th_";
     protected static final String IGNORES_FILES_REGEX = "(\\.DS_Store|\\._\\.DS_Store|\\._.*)";
 
-    protected final Logger log = LoggerFactory.getLogger(RepositoryDaoJackrabbit.class);
+    protected final Logger log = LoggerFactory.getLogger(getClass());
 
     @Value("${maxThumbnailHeight:50}")
     protected int maxThumbnailHeight = 50;
