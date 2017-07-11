@@ -33,7 +33,9 @@ public abstract class GenericObjectWithAttachmentManagerImpl<T extends ObjectWit
 
     public T getIncludingAttachmentAndImage(final Long id) throws Exception {
         T obj = get(id);
-        repositoryDao.populateObjectWithFileInfos(obj);
+        if ( obj != null ) {
+            repositoryDao.populateObjectWithFileInfos(obj);
+        }
         return obj;
     }
 
@@ -41,7 +43,9 @@ public abstract class GenericObjectWithAttachmentManagerImpl<T extends ObjectWit
     @Transactional
     public void remove(final Long id) {
         T obj = get(id);
-        repositoryDao.removeRelatedFiles(obj);
+        if ( obj != null ) {
+            repositoryDao.removeRelatedFiles(obj);
+        }
         GenericObjectWithAttachmentManagerImpl.super.remove(id);
     }
 
